@@ -466,6 +466,9 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
   function openModule(slug: string) {
     setActiveSlug(slug);
     window.history.replaceState(null, "", `#${slug}`);
+    if (slug !== "dashboard" && slug !== "assets") {
+      void refreshModules();
+    }
   }
 
   function renderDashboard() {
