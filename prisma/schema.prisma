@@ -9,9 +9,19 @@ datasource db {
 
 enum AssetStatus {
   IN_STOCK
+  READY_TO_USE
+  ASSIGNED
   IN_USE
+  TRANSFERRED
+  RETURNED
   REPAIR
+  WAITING_REPAIR
+  REPAIRING
+  SPARE
   RETIRED
+  PENDING_DISPOSAL
+  DISPOSED
+  LOST
 }
 
 enum AssetType {
@@ -19,30 +29,217 @@ enum AssetType {
   DESKTOP
   MONITOR
   PRINTER
+  SCANNER
+  MOBILE_PHONE
+  TABLET
   NETWORK
   SERVER
+  FIREWALL
+  SWITCH
+  ROUTER
+  ACCESS_POINT
+  CCTV
+  UPS
   SOFTWARE
+  MICROSOFT_365
+  ADOBE_LICENSE
+  ANTIVIRUS_EDR
+  SAP_B1
+  CRM
+  EMAIL_ACCOUNT
   OTHER
 }
 
-model Asset {
+model Role {
+  id              String           @id @default(cuid())
+  name            String           @unique
+  description     String?
+  users           User[]
+  rolePermissions RolePermission[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model Permission {
+  id              String           @id @default(cuid())
+  key             String           @unique
+  description     String?
+  rolePermissions RolePermission[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@id([roleId, permissionId])
+}
+
+model User {
+  id            String     @id @default(cuid())
+  email         String     @unique
+  name          String
+  passwordHash  String?
+  roleId        String?
+  role          Role?      @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  isActive      Boolean    @default(true)
+  createdAssets Asset[]    @relation("AssetCreatedBy")
+  updatedAssets Asset[]    @relation("AssetUpdatedBy")
+  auditLogs     AuditLog[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@index([roleId])
+  @@index([isActive])
+}
+
+model Branch {
+  id          String     @id @default(cuid())
+  code        String     @unique
+  name        String
+  description String?
+  employees   Employee[]
+  assets      Asset[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Department {
+  id          String     @id @default(cuid())
+  code        String     @unique
+  name        String
+  description String?
+  employees   Employee[]
+  assets      Asset[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Employee {
   id             String      @id @default(cuid())
-  assetTag       String      @unique
-  name           String
-  type           AssetType   @default(OTHER)
-  status         AssetStatus @default(IN_STOCK)
-  serialNumber   String?
-  manufacturer   String?
-  model          String?
-  assignedTo     String?
-  location       String?
-  purchaseDate   DateTime?
-  warrantyUntil  DateTime?
-  notes          String?
+  employeeCode   String      @unique
+  fullName       String
+  email          String?
+  position       String?
+  departmentId   String?
+  branchId       String?
+  managerName    String?
+  employmentType String?
+  startDate      DateTime?
+  endDate        DateTime?
+  isActive       Boolean     @default(true)
+  department     Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  branch         Branch?     @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  assets         Asset[]
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
+
+  @@index([departmentId])
+  @@index([branchId])
+  @@index([isActive])
+}
+
+model AssetCategory {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  prefix      String
+  description String?
+  assets      Asset[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Vendor {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  contactName String?
+  email       String?
+  phone       String?
+  website     String?
+  notes       String?
+  assets      Asset[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Asset {
+  id                String         @id @default(cuid())
+  assetTag          String         @unique
+  name              String
+  type              AssetType      @default(OTHER)
+  status            AssetStatus    @default(IN_STOCK)
+  categoryId        String?
+  currentEmployeeId String?
+  departmentId      String?
+  branchId          String?
+  vendorId          String?
+  serialNumber      String?
+  manufacturer      String?
+  model             String?
+  spec              String?
+  cpu               String?
+  ram               String?
+  storage           String?
+  os                String?
+  assignedTo        String?
+  location          String?
+  purchaseDate      DateTime?
+  purchasePrice     Decimal?       @db.Decimal(12, 2)
+  invoiceNumber     String?
+  warrantyStartDate DateTime?
+  warrantyUntil     DateTime?
+  condition         String?
+  imageUrl          String?
+  notes             String?
+  createdById       String?
+  updatedById       String?
+  category          AssetCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  currentEmployee   Employee?      @relation(fields: [currentEmployeeId], references: [id], onDelete: SetNull)
+  department        Department?    @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  branch            Branch?        @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  vendor            Vendor?        @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  createdBy         User?          @relation("AssetCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy         User?          @relation("AssetUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
   @@index([status])
   @@index([type])
   @@index([assetTag])
+  @@index([categoryId])
+  @@index([currentEmployeeId])
+  @@index([departmentId])
+  @@index([branchId])
+  @@index([vendorId])
+  @@index([createdById])
+  @@index([updatedById])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String?
+  actorUser   User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  module      String
+  action      String
+  entityType  String?
+  entityId    String?
+  beforeData  Json?
+  afterData   Json?
+  reason      String?
+  ipAddress   String?
+  userAgent   String?
+  status      String   @default("SUCCESS")
+  createdAt   DateTime @default(now())
+
+  @@index([actorUserId])
+  @@index([module])
+  @@index([action])
+  @@index([entityType, entityId])
+  @@index([createdAt])
 }

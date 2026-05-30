@@ -47,9 +47,19 @@ const emptyForm: AssetForm = {
 
 const statusText: Record<AssetStatus, string> = {
   IN_STOCK: "พร้อมใช้",
+  READY_TO_USE: "Ready to Use",
+  ASSIGNED: "Assigned",
   IN_USE: "ใช้งานอยู่",
+  TRANSFERRED: "Transferred",
+  RETURNED: "Returned",
   REPAIR: "ซ่อม",
-  RETIRED: "เลิกใช้"
+  WAITING_REPAIR: "Waiting Repair",
+  REPAIRING: "Repairing",
+  SPARE: "Spare",
+  RETIRED: "เลิกใช้",
+  PENDING_DISPOSAL: "Pending Disposal",
+  DISPOSED: "Disposed",
+  LOST: "Lost"
 };
 
 const typeText: Record<AssetType, string> = {
@@ -57,9 +67,24 @@ const typeText: Record<AssetType, string> = {
   DESKTOP: "Desktop",
   MONITOR: "Monitor",
   PRINTER: "Printer",
+  SCANNER: "Scanner",
+  MOBILE_PHONE: "Mobile Phone",
+  TABLET: "Tablet",
   NETWORK: "Network",
   SERVER: "Server",
+  FIREWALL: "Firewall",
+  SWITCH: "Switch",
+  ROUTER: "Router",
+  ACCESS_POINT: "Access Point",
+  CCTV: "CCTV",
+  UPS: "UPS",
   SOFTWARE: "Software",
+  MICROSOFT_365: "Microsoft 365",
+  ADOBE_LICENSE: "Adobe License",
+  ANTIVIRUS_EDR: "Antivirus / EDR",
+  SAP_B1: "SAP B1",
+  CRM: "CRM",
+  EMAIL_ACCOUNT: "Email Account",
   OTHER: "Other"
 };
 
@@ -69,8 +94,23 @@ function formatDate(value: Date | string | null) {
 }
 
 function statusClass(status: AssetStatus) {
-  if (status === AssetStatus.REPAIR) return "badge repair";
-  if (status === AssetStatus.RETIRED) return "badge retired";
+  if (
+    status === AssetStatus.REPAIR ||
+    status === AssetStatus.WAITING_REPAIR ||
+    status === AssetStatus.REPAIRING
+  ) {
+    return "badge repair";
+  }
+
+  if (
+    status === AssetStatus.RETIRED ||
+    status === AssetStatus.PENDING_DISPOSAL ||
+    status === AssetStatus.DISPOSED ||
+    status === AssetStatus.LOST
+  ) {
+    return "badge retired";
+  }
+
   return "badge";
 }
 
