@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { generateAssetCode } from "@/lib/asset-code";
 import { assetInputSchema } from "@/lib/assets";
+import { writeAuditLog } from "@/lib/audit";
 
 export async function GET() {
   const assets = await prisma.asset.findMany({
@@ -20,7 +22,21 @@ export async function POST(request: Request) {
   }
 
   try {
-    const asset = await prisma.asset.create({ data: parsed.data });
+    const data = {
+      ...parsed.data,
+      assetTag: parsed.data.assetTag ?? (await generateAssetCode(prisma, parsed.data.type))
+    };
+
+    const asset = await prisma.asset.create({ data });
+    await writeAuditLog({
+      request,
+      module: "ASSET",
+      action: "CREATE_ASSET",
+      entityType: "Asset",
+      entityId: asset.id,
+      afterData: asset
+    });
+
     return NextResponse.json({ asset }, { status: 201 });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {

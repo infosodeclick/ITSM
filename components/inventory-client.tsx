@@ -88,6 +88,21 @@ const typeText: Record<AssetType, string> = {
   OTHER: "Other"
 };
 
+const navigationItems = [
+  "Dashboard",
+  "Assets",
+  "Assign / Transfer",
+  "Return",
+  "HR Onboarding",
+  "HR Offboarding",
+  "License",
+  "Warranty",
+  "Repair",
+  "Reports",
+  "Audit Log",
+  "Users & Roles"
+];
+
 function formatDate(value: Date | string | null) {
   if (!value) return "-";
   return new Intl.DateTimeFormat("th-TH", { dateStyle: "medium" }).format(new Date(value));
@@ -223,46 +238,61 @@ export default function InventoryClient({ initialAssets, stats }: Props) {
   }
 
   return (
-    <main className="page">
-      <section className="topbar">
-        <div>
-          <p className="eyebrow">Internal IT Operations</p>
-          <h1>ITSM Inventory</h1>
-          <p className="subtitle">
-            ระบบทะเบียนทรัพย์สิน IT สำหรับเก็บอุปกรณ์ ผู้ถือครอง สถานที่ สถานะซ่อม และข้อมูลรับประกัน
-            โดยใช้ฐานข้อมูล PostgreSQL ที่ย้ายไป Railway, cloud อื่น หรือ server องค์กรได้
-          </p>
+    <main className="appShell">
+      <aside className="sidebar" aria-label="Main navigation">
+        <div className="brandBlock">
+          <span>ITSM</span>
+          <strong>Inventory</strong>
         </div>
-        <div className="health">
-          <span>Database</span>
-          <strong>PostgreSQL via DATABASE_URL</strong>
-        </div>
-      </section>
+        <nav className="navList">
+          {navigationItems.map((item) => (
+            <a className={item === "Assets" ? "active" : ""} href="#" key={item}>
+              {item}
+            </a>
+          ))}
+        </nav>
+      </aside>
 
-      <section className="stats" aria-label="Inventory summary">
-        <div className="stat">
-          <span>ทั้งหมด</span>
-          <strong>{visibleStats.total}</strong>
-        </div>
-        <div className="stat">
-          <span>ใช้งานอยู่</span>
-          <strong>{visibleStats.inUse}</strong>
-        </div>
-        <div className="stat">
-          <span>พร้อมใช้</span>
-          <strong>{visibleStats.inStock}</strong>
-        </div>
-        <div className="stat">
-          <span>ซ่อม</span>
-          <strong>{visibleStats.repair}</strong>
-        </div>
-      </section>
+      <div className="page">
+        <section className="topbar">
+          <div>
+            <p className="eyebrow">Internal IT Operations</p>
+            <h1>ITSM Inventory</h1>
+            <p className="subtitle">
+              ระบบทะเบียนทรัพย์สิน IT สำหรับเก็บอุปกรณ์ ผู้ถือครอง สถานที่ สถานะซ่อม และข้อมูลรับประกัน
+              โดยใช้ฐานข้อมูล PostgreSQL ที่ย้ายไป Railway, cloud อื่น หรือ server องค์กรได้
+            </p>
+          </div>
+          <div className="health">
+            <span>Database</span>
+            <strong>PostgreSQL via DATABASE_URL</strong>
+          </div>
+        </section>
 
-      <section className="layout">
-        <aside className="panel">
+        <section className="stats" aria-label="Inventory summary">
+          <div className="stat">
+            <span>ทั้งหมด</span>
+            <strong>{visibleStats.total}</strong>
+          </div>
+          <div className="stat">
+            <span>ใช้งานอยู่</span>
+            <strong>{visibleStats.inUse}</strong>
+          </div>
+          <div className="stat">
+            <span>พร้อมใช้</span>
+            <strong>{visibleStats.inStock}</strong>
+          </div>
+          <div className="stat">
+            <span>ซ่อม</span>
+            <strong>{visibleStats.repair}</strong>
+          </div>
+        </section>
+
+        <section className="layout">
+          <aside className="panel">
           <div className="panelHeader">
             <h2>เพิ่มทรัพย์สิน</h2>
-            <p>ใช้ Asset Tag เป็นรหัสหลัก ห้ามซ้ำ</p>
+            <p>เว้น Asset Tag ว่างได้ ระบบจะสร้างรหัสตามประเภทและปีให้เอง</p>
           </div>
           <form className="form" onSubmit={createAsset}>
             {message ? <p className="notice">{message}</p> : null}
@@ -271,7 +301,11 @@ export default function InventoryClient({ initialAssets, stats }: Props) {
             <div className="formGrid">
               <label>
                 Asset Tag
-                <input value={form.assetTag} onChange={(event) => setField("assetTag", event.target.value)} required />
+                <input
+                  value={form.assetTag}
+                  onChange={(event) => setField("assetTag", event.target.value)}
+                  placeholder="Auto เช่น NB-2026-0001"
+                />
               </label>
               <label>
                 ชื่อ
@@ -414,8 +448,9 @@ export default function InventoryClient({ initialAssets, stats }: Props) {
             </table>
             {filteredAssets.length === 0 ? <div className="empty">ยังไม่มีรายการที่ตรงกับเงื่อนไข</div> : null}
           </div>
+          </section>
         </section>
-      </section>
+      </div>
     </main>
   );
 }
