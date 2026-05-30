@@ -243,6 +243,13 @@ h1 {
   align-items: start;
 }
 
+.moduleGrid {
+  display: grid;
+  grid-template-columns: minmax(280px, 420px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
 .panel {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -273,6 +280,14 @@ h1 {
   display: grid;
   gap: 14px;
   padding: 16px;
+}
+
+.panel.form {
+  gap: 12px;
+}
+
+.panel.form .panelHeader {
+  margin: -16px -16px 4px;
 }
 
 .moduleNote {
@@ -315,6 +330,49 @@ h1 {
   margin-bottom: 5px;
   color: var(--text);
   font-size: 22px;
+}
+
+.recordList {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+}
+
+.recordItem {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #fbfcff;
+}
+
+.recordItem span,
+.recordItem small {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.recordItem small {
+  font-size: 12px;
+}
+
+.buttonLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 38px;
+  border-radius: 6px;
+  padding: 8px 12px;
+  background: var(--brand);
+  color: white;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.buttonLink:hover {
+  background: var(--brand-strong);
 }
 
 .form {
@@ -453,7 +511,8 @@ th {
 
   .topbar,
   .layout,
-  .dashboardGrid {
+  .dashboardGrid,
+  .moduleGrid {
     grid-template-columns: 1fr;
   }
 

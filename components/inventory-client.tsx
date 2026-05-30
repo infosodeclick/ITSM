@@ -1,7 +1,27 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { Asset, AssetStatus, AssetType } from "@prisma/client";
+import {
+  Approval,
+  ApprovalStatus,
+  Asset,
+  AssetMovement,
+  AssetMovementType,
+  AssetStatus,
+  AssetType,
+  AuditLog,
+  Budget,
+  HrRequest,
+  HrRequestStatus,
+  HrRequestType,
+  LicenseStatus,
+  MaintenanceRecord,
+  MaintenanceStatus,
+  Notification,
+  Role,
+  SoftwareLicense,
+  User
+} from "@prisma/client";
 
 type Stats = {
   total: number;
@@ -10,9 +30,25 @@ type Stats = {
   repair: number;
 };
 
+type UserWithRole = User & { role: Role | null };
+
+type ModuleData = {
+  movements: AssetMovement[];
+  hrRequests: HrRequest[];
+  licenses: SoftwareLicense[];
+  maintenanceRecords: MaintenanceRecord[];
+  budgets: Budget[];
+  approvals: Approval[];
+  notifications: Notification[];
+  auditLogs: AuditLog[];
+  users: UserWithRole[];
+  roles: Role[];
+};
+
 type Props = {
   initialAssets: Asset[];
   stats: Stats;
+  initialModules: ModuleData;
 };
 
 type AssetForm = {
@@ -30,6 +66,40 @@ type AssetForm = {
   notes: string;
 };
 
+type ModuleForm = {
+  employeeName: string;
+  employeeCode: string;
+  position: string;
+  department: string;
+  branch: string;
+  startDate: string;
+  lastWorkingDate: string;
+  requestedItems: string;
+  systemsNeeded: string;
+  assetId: string;
+  assetTag: string;
+  fromHolder: string;
+  toHolder: string;
+  reason: string;
+  conditionAfter: string;
+  licenseName: string;
+  vendorName: string;
+  totalSeats: string;
+  usedSeats: string;
+  expiryDate: string;
+  cost: string;
+  issue: string;
+  reportedBy: string;
+  fiscalYear: string;
+  category: string;
+  allocated: string;
+  actual: string;
+  title: string;
+  notes: string;
+};
+
+type ModulePostBody = Record<string, string | number>;
+
 const emptyForm: AssetForm = {
   assetTag: "",
   name: "",
@@ -42,6 +112,38 @@ const emptyForm: AssetForm = {
   location: "",
   purchaseDate: "",
   warrantyUntil: "",
+  notes: ""
+};
+
+const emptyModuleForm: ModuleForm = {
+  employeeName: "",
+  employeeCode: "",
+  position: "",
+  department: "",
+  branch: "",
+  startDate: "",
+  lastWorkingDate: "",
+  requestedItems: "",
+  systemsNeeded: "",
+  assetId: "",
+  assetTag: "",
+  fromHolder: "",
+  toHolder: "",
+  reason: "",
+  conditionAfter: "",
+  licenseName: "",
+  vendorName: "",
+  totalSeats: "1",
+  usedSeats: "0",
+  expiryDate: "",
+  cost: "0",
+  issue: "",
+  reportedBy: "",
+  fiscalYear: "2026",
+  category: "",
+  allocated: "0",
+  actual: "0",
+  title: "",
   notes: ""
 };
 
@@ -198,11 +300,13 @@ function statusClass(status: AssetStatus) {
   return "badge";
 }
 
-export default function InventoryClient({ initialAssets, stats }: Props) {
+export default function InventoryClient({ initialAssets, stats, initialModules }: Props) {
   const [activeSlug, setActiveSlug] = useState(defaultNavigationItem.slug);
   const [assets, setAssets] = useState(initialAssets);
+  const [modules, setModules] = useState(initialModules);
   const [query, setQuery] = useState("");
   const [form, setForm] = useState<AssetForm>(emptyForm);
+  const [moduleForm, setModuleForm] = useState<ModuleForm>(emptyModuleForm);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -246,6 +350,16 @@ export default function InventoryClient({ initialAssets, stats }: Props) {
 
   function setField<K extends keyof AssetForm>(key: K, value: AssetForm[K]) {
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function setModuleField<K extends keyof ModuleForm>(key: K, value: ModuleForm[K]) {
+    setModuleForm((current) => ({ ...current, [key]: value }));
+  }
+
+  async function refreshModules() {
+    const response = await fetch("/api/modules", { cache: "no-store" });
+    if (!response.ok) throw new Error("โหลดข้อมูล module ไม่สำเร็จ");
+    setModules((await response.json()) as ModuleData);
   }
 
   async function refreshAssets() {
@@ -315,6 +429,34 @@ export default function InventoryClient({ initialAssets, stats }: Props) {
 
         setMessage("ลบรายการแล้ว");
         await refreshAssets();
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : "เกิดข้อผิดพลาด");
+      }
+    });
+  }
+
+  function createModuleRecord(event: React.FormEvent<HTMLFormElement>, body: ModulePostBody) {
+    event.preventDefault();
+    setError("");
+    setMessage("");
+
+    startTransition(async () => {
+      try {
+        const response = await fetch("/api/modules", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+
+        if (!response.ok) {
+          const data = (await response.json()) as { error?: string };
+          throw new Error(data.error ?? "บันทึกข้อมูล module ไม่สำเร็จ");
+        }
+
+        const data = (await response.json()) as { modules: ModuleData };
+        setModules(data.modules);
+        setModuleForm(emptyModuleForm);
+        setMessage("บันทึกข้อมูลเรียบร้อยแล้ว");
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : "เกิดข้อผิดพลาด");
       }
@@ -428,6 +570,428 @@ export default function InventoryClient({ initialAssets, stats }: Props) {
     );
   }
 
+  function renderRecords(records: { id: string; primary: string; secondary: string; meta?: string }[]) {
+    return (
+      <div className="recordList">
+        {records.length === 0 ? <div className="empty">ยังไม่มีข้อมูล</div> : null}
+        {records.map((record) => (
+          <div className="recordItem" key={record.id}>
+            <strong>{record.primary}</strong>
+            <span>{record.secondary}</span>
+            {record.meta ? <small>{record.meta}</small> : null}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  function renderOperationalModule(item: NavigationItem) {
+    if (item.slug === "assign-transfer" || item.slug === "return") {
+      const isReturn = item.slug === "return";
+      return (
+        <section className="moduleGrid">
+          <form
+            className="panel form"
+            onSubmit={(event) =>
+              createModuleRecord(event, {
+                module: "movement",
+                type: isReturn ? AssetMovementType.RETURN : AssetMovementType.TRANSFER,
+                assetId: moduleForm.assetId,
+                assetTag: moduleForm.assetTag,
+                fromHolder: moduleForm.fromHolder,
+                toHolder: isReturn ? "IT Stock" : moduleForm.toHolder,
+                reason: moduleForm.reason,
+                conditionAfter: moduleForm.conditionAfter
+              })
+            }
+          >
+            <div className="panelHeader">
+              <h2>{item.title}</h2>
+              <p>{item.description}</p>
+            </div>
+            <label>
+              Asset
+              <select value={moduleForm.assetId} onChange={(event) => setModuleField("assetId", event.target.value)}>
+                <option value="">เลือกจากรายการ หรือกรอก Asset Tag เอง</option>
+                {assets.map((asset) => (
+                  <option key={asset.id} value={asset.id}>
+                    {asset.assetTag} - {asset.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Asset Tag
+              <input value={moduleForm.assetTag} onChange={(event) => setModuleField("assetTag", event.target.value)} />
+            </label>
+            <label>
+              From
+              <input value={moduleForm.fromHolder} onChange={(event) => setModuleField("fromHolder", event.target.value)} />
+            </label>
+            {!isReturn ? (
+              <label>
+                To
+                <input value={moduleForm.toHolder} onChange={(event) => setModuleField("toHolder", event.target.value)} required />
+              </label>
+            ) : null}
+            <label>
+              Reason
+              <input value={moduleForm.reason} onChange={(event) => setModuleField("reason", event.target.value)} />
+            </label>
+            <label>
+              Condition
+              <input value={moduleForm.conditionAfter} onChange={(event) => setModuleField("conditionAfter", event.target.value)} />
+            </label>
+            <button disabled={isPending} type="submit">
+              บันทึก
+            </button>
+          </form>
+          <section className="panel">
+            <div className="panelHeader">
+              <h2>ประวัติล่าสุด</h2>
+              <p>รายการ Assign / Transfer / Return</p>
+            </div>
+            {renderRecords(
+              modules.movements.map((movement) => ({
+                id: movement.id,
+                primary: `${movement.type} ${movement.assetTag ?? movement.assetId ?? "-"}`,
+                secondary: `${movement.fromHolder ?? "-"} -> ${movement.toHolder ?? "-"}`,
+                meta: formatDate(movement.movedAt)
+              }))
+            )}
+          </section>
+        </section>
+      );
+    }
+
+    if (item.slug === "hr-onboarding" || item.slug === "hr-offboarding") {
+      const isOffboarding = item.slug === "hr-offboarding";
+      const requestType = isOffboarding ? HrRequestType.OFFBOARDING : HrRequestType.ONBOARDING;
+      const records = modules.hrRequests.filter((request) => request.type === requestType);
+      return (
+        <section className="moduleGrid">
+          <form
+            className="panel form"
+            onSubmit={(event) =>
+              createModuleRecord(event, {
+                module: "hrRequest",
+                type: requestType,
+                employeeName: moduleForm.employeeName,
+                employeeCode: moduleForm.employeeCode,
+                position: moduleForm.position,
+                department: moduleForm.department,
+                branch: moduleForm.branch,
+                startDate: isOffboarding ? "" : moduleForm.startDate,
+                lastWorkingDate: isOffboarding ? moduleForm.lastWorkingDate : "",
+                requestedItems: moduleForm.requestedItems,
+                systemsNeeded: moduleForm.systemsNeeded,
+                status: HrRequestStatus.SUBMITTED,
+                notes: moduleForm.notes
+              })
+            }
+          >
+            <div className="panelHeader">
+              <h2>{item.title}</h2>
+              <p>{item.description}</p>
+            </div>
+            <div className="formGrid">
+              <label>
+                Employee Name
+                <input value={moduleForm.employeeName} onChange={(event) => setModuleField("employeeName", event.target.value)} required />
+              </label>
+              <label>
+                Employee Code
+                <input value={moduleForm.employeeCode} onChange={(event) => setModuleField("employeeCode", event.target.value)} />
+              </label>
+              <label>
+                Department
+                <input value={moduleForm.department} onChange={(event) => setModuleField("department", event.target.value)} />
+              </label>
+              <label>
+                Branch
+                <input value={moduleForm.branch} onChange={(event) => setModuleField("branch", event.target.value)} />
+              </label>
+              <label>
+                {isOffboarding ? "Last Working Date" : "Start Date"}
+                <input
+                  type="date"
+                  value={isOffboarding ? moduleForm.lastWorkingDate : moduleForm.startDate}
+                  onChange={(event) => setModuleField(isOffboarding ? "lastWorkingDate" : "startDate", event.target.value)}
+                />
+              </label>
+              <label>
+                Position
+                <input value={moduleForm.position} onChange={(event) => setModuleField("position", event.target.value)} />
+              </label>
+              <label className="span2">
+                Items / Systems
+                <textarea value={moduleForm.requestedItems} onChange={(event) => setModuleField("requestedItems", event.target.value)} />
+              </label>
+            </div>
+            <button disabled={isPending} type="submit">
+              บันทึกคำขอ HR
+            </button>
+          </form>
+          <section className="panel">
+            <div className="panelHeader">
+              <h2>รายการล่าสุด</h2>
+              <p>{item.title}</p>
+            </div>
+            {renderRecords(
+              records.map((request) => ({
+                id: request.id,
+                primary: request.employeeName,
+                secondary: `${request.department ?? "-"} / ${request.branch ?? "-"} / ${request.status}`,
+                meta: formatDate(isOffboarding ? request.lastWorkingDate : request.startDate)
+              }))
+            )}
+          </section>
+        </section>
+      );
+    }
+
+    if (item.slug === "license") {
+      return (
+        <section className="moduleGrid">
+          <form
+            className="panel form"
+            onSubmit={(event) =>
+              createModuleRecord(event, {
+                module: "license",
+                name: moduleForm.licenseName,
+                vendorName: moduleForm.vendorName,
+                totalSeats: moduleForm.totalSeats,
+                usedSeats: moduleForm.usedSeats,
+                expiryDate: moduleForm.expiryDate,
+                costPerSeat: moduleForm.cost,
+                status: LicenseStatus.ACTIVE,
+                notes: moduleForm.notes
+              })
+            }
+          >
+            <div className="panelHeader">
+              <h2>License</h2>
+              <p>จัดการจำนวน license และวันหมดอายุ</p>
+            </div>
+            <div className="formGrid">
+              <label>
+                License Name
+                <input value={moduleForm.licenseName} onChange={(event) => setModuleField("licenseName", event.target.value)} required />
+              </label>
+              <label>
+                Vendor
+                <input value={moduleForm.vendorName} onChange={(event) => setModuleField("vendorName", event.target.value)} />
+              </label>
+              <label>
+                Total Seats
+                <input type="number" value={moduleForm.totalSeats} onChange={(event) => setModuleField("totalSeats", event.target.value)} />
+              </label>
+              <label>
+                Used Seats
+                <input type="number" value={moduleForm.usedSeats} onChange={(event) => setModuleField("usedSeats", event.target.value)} />
+              </label>
+              <label>
+                Expiry Date
+                <input type="date" value={moduleForm.expiryDate} onChange={(event) => setModuleField("expiryDate", event.target.value)} />
+              </label>
+              <label>
+                Cost / Seat
+                <input type="number" value={moduleForm.cost} onChange={(event) => setModuleField("cost", event.target.value)} />
+              </label>
+            </div>
+            <button disabled={isPending} type="submit">
+              บันทึก License
+            </button>
+          </form>
+          <section className="panel">
+            <div className="panelHeader">
+              <h2>License List</h2>
+              <p>รายการ License ทั้งหมด</p>
+            </div>
+            {renderRecords(
+              modules.licenses.map((license) => ({
+                id: license.id,
+                primary: license.name,
+                secondary: `${license.usedSeats}/${license.totalSeats} used / ${license.status}`,
+                meta: `Expires ${formatDate(license.expiryDate)}`
+              }))
+            )}
+          </section>
+        </section>
+      );
+    }
+
+    if (item.slug === "warranty") {
+      const warrantyAssets = assets
+        .filter((asset) => asset.warrantyUntil)
+        .sort((a, b) => new Date(a.warrantyUntil!).getTime() - new Date(b.warrantyUntil!).getTime());
+      return (
+        <section className="panel modulePanel">
+          <div className="panelHeader">
+            <h2>Warranty</h2>
+            <p>อุปกรณ์ที่มีวันหมดประกัน เรียงจากใกล้หมดก่อน</p>
+          </div>
+          {renderRecords(
+            warrantyAssets.map((asset) => ({
+              id: asset.id,
+              primary: `${asset.assetTag} - ${asset.name}`,
+              secondary: `${asset.assignedTo ?? "-"} / ${asset.location ?? "-"}`,
+              meta: formatDate(asset.warrantyUntil)
+            }))
+          )}
+        </section>
+      );
+    }
+
+    if (item.slug === "repair") {
+      return (
+        <section className="moduleGrid">
+          <form
+            className="panel form"
+            onSubmit={(event) =>
+              createModuleRecord(event, {
+                module: "maintenance",
+                assetId: moduleForm.assetId,
+                assetTag: moduleForm.assetTag,
+                issue: moduleForm.issue,
+                reportedBy: moduleForm.reportedBy,
+                vendorName: moduleForm.vendorName,
+                cost: moduleForm.cost,
+                status: MaintenanceStatus.REPORTED,
+                notes: moduleForm.notes
+              })
+            }
+          >
+            <div className="panelHeader">
+              <h2>Repair</h2>
+              <p>บันทึกงานซ่อมและค่าใช้จ่าย</p>
+            </div>
+            <label>
+              Asset
+              <select value={moduleForm.assetId} onChange={(event) => setModuleField("assetId", event.target.value)}>
+                <option value="">เลือก Asset</option>
+                {assets.map((asset) => (
+                  <option key={asset.id} value={asset.id}>
+                    {asset.assetTag} - {asset.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Issue
+              <textarea value={moduleForm.issue} onChange={(event) => setModuleField("issue", event.target.value)} required />
+            </label>
+            <label>
+              Reported By
+              <input value={moduleForm.reportedBy} onChange={(event) => setModuleField("reportedBy", event.target.value)} />
+            </label>
+            <label>
+              Vendor
+              <input value={moduleForm.vendorName} onChange={(event) => setModuleField("vendorName", event.target.value)} />
+            </label>
+            <button disabled={isPending} type="submit">
+              บันทึกงานซ่อม
+            </button>
+          </form>
+          <section className="panel">
+            <div className="panelHeader">
+              <h2>Repair Records</h2>
+              <p>รายการซ่อมล่าสุด</p>
+            </div>
+            {renderRecords(
+              modules.maintenanceRecords.map((record) => ({
+                id: record.id,
+                primary: record.assetTag ?? record.assetId ?? "Asset",
+                secondary: `${record.issue} / ${record.status}`,
+                meta: formatDate(record.reportedAt)
+              }))
+            )}
+          </section>
+        </section>
+      );
+    }
+
+    if (item.slug === "reports") {
+      return (
+        <section className="panel modulePanel">
+          <div className="panelHeader">
+            <h2>Reports</h2>
+            <p>Export รายงาน asset เป็น CSV สำหรับเปิดใน Excel ได้ทันที</p>
+          </div>
+          <div className="moduleBody">
+            <a className="buttonLink" href="/api/reports">
+              Export Assets CSV
+            </a>
+            {renderRecords(
+              modules.budgets.map((budget) => ({
+                id: budget.id,
+                primary: `${budget.fiscalYear} - ${budget.category}`,
+                secondary: `${budget.department ?? "-"} / ${budget.branch ?? "-"}`,
+                meta: `Allocated ${budget.allocated.toString()} / Actual ${budget.actual.toString()}`
+              }))
+            )}
+          </div>
+        </section>
+      );
+    }
+
+    if (item.slug === "audit-log") {
+      return (
+        <section className="panel modulePanel">
+          <div className="panelHeader">
+            <h2>Audit Log</h2>
+            <p>ประวัติการทำรายการล่าสุดในระบบ</p>
+          </div>
+          {renderRecords(
+            modules.auditLogs.map((log) => ({
+              id: log.id,
+              primary: `${log.module} / ${log.action}`,
+              secondary: `${log.entityType ?? "-"} ${log.entityId ?? ""}`,
+              meta: formatDate(log.createdAt)
+            }))
+          )}
+        </section>
+      );
+    }
+
+    if (item.slug === "users-roles") {
+      return (
+        <section className="moduleGrid">
+          <section className="panel">
+            <div className="panelHeader">
+              <h2>Users</h2>
+              <p>ผู้ใช้งานที่มีในระบบ</p>
+            </div>
+            {renderRecords(
+              modules.users.map((user) => ({
+                id: user.id,
+                primary: user.name,
+                secondary: `${user.email} / ${user.role?.name ?? "No Role"}`,
+                meta: user.isActive ? "Active" : "Disabled"
+              }))
+            )}
+          </section>
+          <section className="panel">
+            <div className="panelHeader">
+              <h2>Roles</h2>
+              <p>บทบาทที่ตั้งค่าไว้</p>
+            </div>
+            {renderRecords(
+              modules.roles.map((role) => ({
+                id: role.id,
+                primary: role.name,
+                secondary: role.description ?? "-",
+                meta: formatDate(role.createdAt)
+              }))
+            )}
+          </section>
+        </section>
+      );
+    }
+
+    return renderModulePlaceholder(item);
+  }
+
   return (
     <main className="appShell">
       <aside className="sidebar" aria-label="Main navigation">
@@ -490,7 +1054,7 @@ export default function InventoryClient({ initialAssets, stats }: Props) {
 
         {activeItem.slug === "dashboard" ? renderDashboard() : null}
 
-        {activeItem.slug !== "dashboard" && activeItem.slug !== "assets" ? renderModulePlaceholder(activeItem) : null}
+        {activeItem.slug !== "dashboard" && activeItem.slug !== "assets" ? renderOperationalModule(activeItem) : null}
 
         {activeItem.slug === "assets" ? (
         <section className="layout">

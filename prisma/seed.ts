@@ -139,6 +139,60 @@ async function main() {
       notes: "ข้อมูลตัวอย่างสำหรับตรวจระบบหลัง deploy"
     }
   });
+
+  const adminRole = createdRoles.find((role) => role.name === "SUPER_ADMIN");
+  await prisma.user.upsert({
+    where: { email: "admin@example.com" },
+    update: { name: "System Admin", roleId: adminRole?.id },
+    create: {
+      email: "admin@example.com",
+      name: "System Admin",
+      roleId: adminRole?.id
+    }
+  });
+
+  if ((await prisma.softwareLicense.count()) === 0) {
+    await prisma.softwareLicense.create({
+      data: {
+        name: "Microsoft 365 Business",
+        vendorName: "Microsoft",
+        totalSeats: 25,
+        usedSeats: 10,
+        expiryDate: new Date("2026-12-31"),
+        renewalCycle: "Yearly",
+        status: "ACTIVE",
+        notes: "Demo license for production verification"
+      }
+    });
+  }
+
+  if ((await prisma.hrRequest.count()) === 0) {
+    await prisma.hrRequest.create({
+      data: {
+        type: "ONBOARDING",
+        employeeCode: "EMP-DEMO",
+        employeeName: "Demo Employee",
+        department: "IT",
+        branch: "HQ",
+        startDate: new Date("2026-06-01"),
+        requestedItems: "Notebook, Email, Microsoft 365",
+        status: "SUBMITTED"
+      }
+    });
+  }
+
+  if ((await prisma.budget.count()) === 0) {
+    await prisma.budget.create({
+      data: {
+        fiscalYear: 2026,
+        category: "Hardware",
+        department: "IT",
+        branch: "HQ",
+        allocated: 500000,
+        actual: 0
+      }
+    });
+  }
 }
 
 main()

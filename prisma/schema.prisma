@@ -50,6 +50,60 @@ enum AssetType {
   OTHER
 }
 
+enum AssetMovementType {
+  ASSIGN
+  TRANSFER
+  RETURN
+}
+
+enum HrRequestType {
+  ONBOARDING
+  OFFBOARDING
+}
+
+enum HrRequestStatus {
+  DRAFT
+  SUBMITTED
+  RECEIVED_BY_IT
+  PREPARING
+  WAITING_APPROVAL
+  READY_TO_DELIVER
+  DELIVERED
+  COMPLETED
+  CANCELLED
+}
+
+enum LicenseStatus {
+  ACTIVE
+  EXPIRING_SOON
+  EXPIRED
+  CANCELLED
+}
+
+enum MaintenanceStatus {
+  REPORTED
+  CHECKING
+  WAITING_VENDOR
+  SENT_TO_REPAIR
+  REPAIRED
+  RETURNED
+  CANNOT_REPAIR
+  DISPOSED
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum NotificationStatus {
+  OPEN
+  DONE
+  DISMISSED
+}
+
 model Role {
   id              String           @id @default(cuid())
   name            String           @unique
@@ -119,6 +173,59 @@ model Department {
   updatedAt   DateTime   @updatedAt
 }
 
+model AssetMovement {
+  id              String            @id @default(cuid())
+  type            AssetMovementType
+  assetId         String?
+  assetTag        String?
+  assetName       String?
+  fromHolder      String?
+  toHolder        String?
+  fromDepartment  String?
+  toDepartment    String?
+  fromBranch      String?
+  toBranch        String?
+  reason          String?
+  conditionBefore String?
+  conditionAfter  String?
+  handledBy       String?
+  approvedBy      String?
+  movedAt         DateTime          @default(now())
+  asset           Asset?            @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([type])
+  @@index([assetId])
+  @@index([movedAt])
+}
+
+model HrRequest {
+  id              String          @id @default(cuid())
+  type            HrRequestType
+  employeeCode    String?
+  employeeName    String
+  position        String?
+  department      String?
+  branch          String?
+  managerName     String?
+  employmentType  String?
+  startDate       DateTime?
+  lastWorkingDate DateTime?
+  requestedItems  String?
+  systemsNeeded   String?
+  status          HrRequestStatus @default(SUBMITTED)
+  owner           String?
+  notes           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([type])
+  @@index([status])
+  @@index([startDate])
+  @@index([lastWorkingDate])
+}
+
 model Employee {
   id             String      @id @default(cuid())
   employeeCode   String      @unique
@@ -164,8 +271,109 @@ model Vendor {
   website     String?
   notes       String?
   assets      Asset[]
+  licenses    SoftwareLicense[]
+  maintenance MaintenanceRecord[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model SoftwareLicense {
+  id           String        @id @default(cuid())
+  name         String
+  vendorId     String?
+  vendorName   String?
+  totalSeats   Int           @default(1)
+  usedSeats    Int           @default(0)
+  startDate    DateTime?
+  expiryDate   DateTime?
+  costPerSeat  Decimal?      @db.Decimal(12, 2)
+  renewalCycle String?
+  owner        String?
+  department   String?
+  branch       String?
+  status       LicenseStatus @default(ACTIVE)
+  notes        String?
+  vendor       Vendor?       @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([status])
+  @@index([expiryDate])
+  @@index([vendorId])
+}
+
+model MaintenanceRecord {
+  id         String            @id @default(cuid())
+  assetId    String?
+  assetTag   String?
+  assetName  String?
+  issue      String
+  reportedBy String?
+  handledBy  String?
+  vendorId   String?
+  vendorName String?
+  cost       Decimal?          @db.Decimal(12, 2)
+  status     MaintenanceStatus @default(REPORTED)
+  reportedAt DateTime          @default(now())
+  sentAt     DateTime?
+  returnedAt DateTime?
+  result     String?
+  notes      String?
+  asset      Asset?            @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  vendor     Vendor?           @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  @@index([assetId])
+  @@index([status])
+  @@index([reportedAt])
+}
+
+model Budget {
+  id         String   @id @default(cuid())
+  fiscalYear Int
+  category   String
+  department String?
+  branch     String?
+  allocated  Decimal  @default(0) @db.Decimal(12, 2)
+  actual     Decimal  @default(0) @db.Decimal(12, 2)
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([fiscalYear])
+  @@index([category])
+}
+
+model Approval {
+  id        String         @id @default(cuid())
+  module    String
+  title     String
+  amount    Decimal?       @db.Decimal(12, 2)
+  requester String?
+  approver  String?
+  status    ApprovalStatus @default(PENDING)
+  notes     String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([module])
+  @@index([status])
+}
+
+model Notification {
+  id        String             @id @default(cuid())
+  module    String
+  title     String
+  message   String?
+  dueDate   DateTime?
+  status    NotificationStatus @default(OPEN)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@index([module])
+  @@index([status])
+  @@index([dueDate])
 }
 
 model Asset {
@@ -204,6 +412,8 @@ model Asset {
   department        Department?    @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   branch            Branch?        @relation(fields: [branchId], references: [id], onDelete: SetNull)
   vendor            Vendor?        @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  movements         AssetMovement[]
+  maintenance       MaintenanceRecord[]
   createdBy         User?          @relation("AssetCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   updatedBy         User?          @relation("AssetUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
   createdAt         DateTime       @default(now())
