@@ -236,6 +236,13 @@ h1 {
   align-items: start;
 }
 
+.dashboardGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  gap: 18px;
+  align-items: start;
+}
+
 .panel {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -256,6 +263,58 @@ h1 {
   margin: 6px 0 0;
   color: var(--muted);
   font-size: 14px;
+}
+
+.modulePanel {
+  overflow: hidden;
+}
+
+.moduleBody {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.moduleNote {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.metricGrid,
+.summaryList {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+}
+
+.metricGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.metric,
+.summaryList div {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #fbfcff;
+}
+
+.metric span,
+.summaryList span {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.metric strong,
+.summaryList strong {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--text);
+  font-size: 22px;
 }
 
 .form {
@@ -393,7 +452,8 @@ th {
   }
 
   .topbar,
-  .layout {
+  .layout,
+  .dashboardGrid {
     grid-template-columns: 1fr;
   }
 
@@ -413,6 +473,7 @@ th {
   }
 
   .stats,
+  .metricGrid,
   .formGrid {
     grid-template-columns: 1fr;
   }
