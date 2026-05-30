@@ -243,6 +243,11 @@ h1 {
   align-items: start;
 }
 
+.dashboardStack {
+  display: grid;
+  gap: 18px;
+}
+
 .moduleGrid {
   display: grid;
   grid-template-columns: minmax(280px, 420px) minmax(0, 1fr);
@@ -411,6 +416,10 @@ table {
   width: 100%;
   min-width: 760px;
   border-collapse: collapse;
+}
+
+table.compactTable {
+  min-width: 640px;
 }
 
 th,

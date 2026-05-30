@@ -300,6 +300,30 @@ function statusClass(status: AssetStatus) {
   return "badge";
 }
 
+function isInUseStatus(status: AssetStatus) {
+  return status === AssetStatus.IN_USE || status === AssetStatus.ASSIGNED || status === AssetStatus.TRANSFERRED;
+}
+
+function isBrokenStatus(status: AssetStatus) {
+  return status === AssetStatus.REPAIR || status === AssetStatus.WAITING_REPAIR || status === AssetStatus.REPAIRING;
+}
+
+function isAvailableStatus(status: AssetStatus) {
+  return (
+    status === AssetStatus.IN_STOCK ||
+    status === AssetStatus.READY_TO_USE ||
+    status === AssetStatus.RETURNED ||
+    status === AssetStatus.SPARE
+  );
+}
+
+function purchaseYearLabel(value: Date | string | null) {
+  if (!value) return "ไม่ระบุปี";
+  const year = new Date(value).getFullYear();
+  if (Number.isNaN(year)) return "ไม่ระบุปี";
+  return `ปี ${String(year + 543).slice(-2)}`;
+}
+
 export default function InventoryClient({ initialAssets, stats, initialModules }: Props) {
   const [activeSlug, setActiveSlug] = useState(defaultNavigationItem.slug);
   const [assets, setAssets] = useState(initialAssets);
@@ -314,9 +338,9 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
   const derivedStats = useMemo(
     () => ({
       total: assets.length,
-      inUse: assets.filter((asset) => asset.status === AssetStatus.IN_USE).length,
-      inStock: assets.filter((asset) => asset.status === AssetStatus.IN_STOCK).length,
-      repair: assets.filter((asset) => asset.status === AssetStatus.REPAIR).length
+      inUse: assets.filter((asset) => isInUseStatus(asset.status)).length,
+      inStock: assets.filter((asset) => isAvailableStatus(asset.status)).length,
+      repair: assets.filter((asset) => isBrokenStatus(asset.status)).length
     }),
     [assets]
   );
@@ -486,9 +510,101 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
         asset.status === AssetStatus.DISPOSED ||
         asset.status === AssetStatus.LOST
     ).length;
+    const purchaseYearRows = Object.values(
+      assets.reduce<
+        Record<
+          string,
+          {
+            label: string;
+            sortYear: number;
+            total: number;
+            inUse: number;
+            broken: number;
+            available: number;
+            other: number;
+          }
+        >
+      >((summary, asset) => {
+        const label = purchaseYearLabel(asset.purchaseDate);
+        const purchaseYear = asset.purchaseDate ? new Date(asset.purchaseDate).getFullYear() : 0;
+        const row = summary[label] ?? {
+          label,
+          sortYear: Number.isNaN(purchaseYear) ? 0 : purchaseYear,
+          total: 0,
+          inUse: 0,
+          broken: 0,
+          available: 0,
+          other: 0
+        };
+
+        row.total += 1;
+        if (isInUseStatus(asset.status)) row.inUse += 1;
+        else if (isBrokenStatus(asset.status)) row.broken += 1;
+        else if (isAvailableStatus(asset.status)) row.available += 1;
+        else row.other += 1;
+
+        summary[label] = row;
+        return summary;
+      }, {})
+    ).sort((a, b) => {
+      if (a.sortYear === 0) return 1;
+      if (b.sortYear === 0) return -1;
+      return b.sortYear - a.sortYear;
+    });
+    const purchaseTypeRows = Object.values(
+      assets.reduce<
+        Record<
+          string,
+          {
+            key: string;
+            yearLabel: string;
+            typeLabel: string;
+            sortYear: number;
+            total: number;
+            inUse: number;
+            broken: number;
+            available: number;
+            other: number;
+          }
+        >
+      >((summary, asset) => {
+        const yearLabel = purchaseYearLabel(asset.purchaseDate);
+        const typeLabel = typeText[asset.type];
+        const key = `${yearLabel}-${asset.type}`;
+        const purchaseYear = asset.purchaseDate ? new Date(asset.purchaseDate).getFullYear() : 0;
+        const row = summary[key] ?? {
+          key,
+          yearLabel,
+          typeLabel,
+          sortYear: Number.isNaN(purchaseYear) ? 0 : purchaseYear,
+          total: 0,
+          inUse: 0,
+          broken: 0,
+          available: 0,
+          other: 0
+        };
+
+        row.total += 1;
+        if (isInUseStatus(asset.status)) row.inUse += 1;
+        else if (isBrokenStatus(asset.status)) row.broken += 1;
+        else if (isAvailableStatus(asset.status)) row.available += 1;
+        else row.other += 1;
+
+        summary[key] = row;
+        return summary;
+      }, {})
+    ).sort((a, b) => {
+      if (a.sortYear !== b.sortYear) {
+        if (a.sortYear === 0) return 1;
+        if (b.sortYear === 0) return -1;
+        return b.sortYear - a.sortYear;
+      }
+      return a.typeLabel.localeCompare(b.typeLabel);
+    });
 
     return (
-      <section className="dashboardGrid" aria-label="Dashboard overview">
+      <section className="dashboardStack" aria-label="Dashboard overview">
+        <div className="dashboardGrid">
         <div className="panel modulePanel">
           <div className="panelHeader">
             <h2>Inventory Snapshot</h2>
@@ -533,6 +649,77 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
               <span>Asset ที่เลิกใช้/รอจำหน่าย/สูญหาย</span>
             </div>
           </div>
+        </div>
+
+        <div className="panel modulePanel">
+          <div className="panelHeader">
+            <h2>Purchase Year Summary</h2>
+            <p>สรุปจำนวนเครื่องตามปีที่ซื้อและสถานะการใช้งาน</p>
+          </div>
+          <div className="tableWrap">
+            <table className="compactTable">
+              <thead>
+                <tr>
+                  <th>ปีที่ซื้อ</th>
+                  <th>ทั้งหมด</th>
+                  <th>ใช้งาน</th>
+                  <th>พัง/ซ่อม</th>
+                  <th>ว่าง/พร้อมใช้</th>
+                  <th>อื่น ๆ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {purchaseYearRows.map((row) => (
+                  <tr key={row.label}>
+                    <td>{row.label}</td>
+                    <td>{row.total}</td>
+                    <td>{row.inUse}</td>
+                    <td>{row.broken}</td>
+                    <td>{row.available}</td>
+                    <td>{row.other}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {purchaseYearRows.length === 0 ? <div className="empty">ยังไม่มีข้อมูลปีที่ซื้อ</div> : null}
+          </div>
+        </div>
+
+        <div className="panel modulePanel">
+          <div className="panelHeader">
+            <h2>Purchase Year by Type</h2>
+            <p>แยกประเภทอุปกรณ์ในแต่ละปี เช่น Notebook ปี 64 ใช้งานกี่เครื่อง พังกี่เครื่อง และว่างกี่เครื่อง</p>
+          </div>
+          <div className="tableWrap">
+            <table className="compactTable">
+              <thead>
+                <tr>
+                  <th>ปีที่ซื้อ</th>
+                  <th>ประเภท</th>
+                  <th>ทั้งหมด</th>
+                  <th>ใช้งาน</th>
+                  <th>พัง/ซ่อม</th>
+                  <th>ว่าง/พร้อมใช้</th>
+                  <th>อื่น ๆ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {purchaseTypeRows.map((row) => (
+                  <tr key={row.key}>
+                    <td>{row.yearLabel}</td>
+                    <td>{row.typeLabel}</td>
+                    <td>{row.total}</td>
+                    <td>{row.inUse}</td>
+                    <td>{row.broken}</td>
+                    <td>{row.available}</td>
+                    <td>{row.other}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {purchaseTypeRows.length === 0 ? <div className="empty">ยังไม่มีข้อมูลแยกตามประเภท</div> : null}
+          </div>
+        </div>
         </div>
       </section>
     );
