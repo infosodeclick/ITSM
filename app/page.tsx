@@ -23,6 +23,11 @@ function isRepairStatus(status: AssetStatus) {
 
 export default async function Home() {
   const assets = await prisma.asset.findMany({
+    include: {
+      branch: true,
+      category: true,
+      department: true
+    },
     orderBy: [{ updatedAt: "desc" }, { assetTag: "asc" }]
   });
   const [movements, hrRequests, licenses, maintenanceRecords, budgets, approvals, notifications, auditLogs, users, roles] =

@@ -5,12 +5,15 @@ import {
   Approval,
   ApprovalStatus,
   Asset,
+  AssetCategory,
   AssetMovement,
   AssetMovementType,
   AssetStatus,
   AssetType,
   AuditLog,
+  Branch,
   Budget,
+  Department,
   HrRequest,
   HrRequestStatus,
   HrRequestType,
@@ -30,6 +33,12 @@ type Stats = {
   repair: number;
 };
 
+type AssetWithLookups = Asset & {
+  branch?: Branch | null;
+  category?: AssetCategory | null;
+  department?: Department | null;
+};
+
 type UserWithRole = User & { role: Role | null };
 
 type ModuleData = {
@@ -46,9 +55,17 @@ type ModuleData = {
 };
 
 type Props = {
-  initialAssets: Asset[];
+  initialAssets: AssetWithLookups[];
   stats: Stats;
   initialModules: ModuleData;
+};
+
+type DashboardFilters = {
+  branch: string;
+  department: string;
+  status: string;
+  type: string;
+  year: string;
 };
 
 type AssetForm = {
@@ -145,6 +162,14 @@ const emptyModuleForm: ModuleForm = {
   actual: "0",
   title: "",
   notes: ""
+};
+
+const defaultDashboardFilters: DashboardFilters = {
+  branch: "ALL",
+  department: "ALL",
+  status: "ALL",
+  type: "ALL",
+  year: "ALL"
 };
 
 const statusText: Record<AssetStatus, string> = {
@@ -317,6 +342,13 @@ function isAvailableStatus(status: AssetStatus) {
   );
 }
 
+function statusGroupLabel(status: AssetStatus) {
+  if (isInUseStatus(status)) return "ใช้งาน";
+  if (isBrokenStatus(status)) return "พัง/ซ่อม";
+  if (isAvailableStatus(status)) return "ว่าง/พร้อมใช้";
+  return "อื่น ๆ";
+}
+
 function purchaseYearLabel(value: Date | string | null) {
   if (!value) return "ไม่ระบุปี";
   const year = new Date(value).getFullYear();
@@ -324,9 +356,44 @@ function purchaseYearLabel(value: Date | string | null) {
   return `ปี ${String(year + 543).slice(-2)}`;
 }
 
+function purchaseYearValue(value: Date | string | null) {
+  if (!value) return "UNSPECIFIED";
+  const year = new Date(value).getFullYear();
+  return Number.isNaN(year) ? "UNSPECIFIED" : String(year);
+}
+
+function purchaseYearOptionLabel(value: string) {
+  if (value === "UNSPECIFIED") return "ไม่ระบุปี";
+  const year = Number(value);
+  return Number.isNaN(year) ? "ไม่ระบุปี" : `ปี ${String(year + 543).slice(-2)}`;
+}
+
+function getAssetDepartment(asset: AssetWithLookups) {
+  return asset.department?.name ?? asset.departmentId ?? "ไม่ระบุแผนก";
+}
+
+function getAssetBranch(asset: AssetWithLookups) {
+  return asset.branch?.name ?? asset.location ?? asset.branchId ?? "ไม่ระบุสาขา";
+}
+
+function countBy<T>(items: T[], getKey: (item: T) => string) {
+  return items.reduce<Record<string, number>>((summary, item) => {
+    const key = getKey(item);
+    summary[key] = (summary[key] ?? 0) + 1;
+    return summary;
+  }, {});
+}
+
+function chartRowsFromCounts(counts: Record<string, number>) {
+  return Object.entries(counts)
+    .map(([label, value]) => ({ label, value }))
+    .sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
+}
+
 export default function InventoryClient({ initialAssets, stats, initialModules }: Props) {
   const [activeSlug, setActiveSlug] = useState(defaultNavigationItem.slug);
   const [assets, setAssets] = useState(initialAssets);
+  const [dashboardFilters, setDashboardFilters] = useState<DashboardFilters>(defaultDashboardFilters);
   const [modules, setModules] = useState(initialModules);
   const [query, setQuery] = useState("");
   const [form, setForm] = useState<AssetForm>(emptyForm);
@@ -380,6 +447,10 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
     setModuleForm((current) => ({ ...current, [key]: value }));
   }
 
+  function setDashboardFilter<K extends keyof DashboardFilters>(key: K, value: DashboardFilters[K]) {
+    setDashboardFilters((current) => ({ ...current, [key]: value }));
+  }
+
   async function refreshModules() {
     const response = await fetch("/api/modules", { cache: "no-store" });
     if (!response.ok) throw new Error("โหลดข้อมูล module ไม่สำเร็จ");
@@ -389,7 +460,7 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
   async function refreshAssets() {
     const response = await fetch("/api/assets", { cache: "no-store" });
     if (!response.ok) throw new Error("โหลดข้อมูลไม่สำเร็จ");
-    const data = (await response.json()) as { assets: Asset[] };
+    const data = (await response.json()) as { assets: AssetWithLookups[] };
     setAssets(data.assets);
   }
 
@@ -495,15 +566,70 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
     }
   }
 
+  function renderBarChart(rows: { label: string; value: number }[], maxValue: number) {
+    return (
+      <div className="barChart">
+        {rows.length === 0 ? <div className="empty">ยังไม่มีข้อมูลสำหรับกราฟ</div> : null}
+        {rows.slice(0, 8).map((row) => (
+          <div className="barRow" key={row.label}>
+            <div className="barLabel">
+              <span>{row.label}</span>
+              <strong>{row.value}</strong>
+            </div>
+            <div className="barTrack" aria-hidden="true">
+              <div className="barFill" style={{ width: `${Math.max(6, (row.value / maxValue) * 100)}%` }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   function renderDashboard() {
-    const warrantySoon = assets.filter((asset) => {
+    const yearOptions = Array.from(new Set(assets.map((asset) => purchaseYearValue(asset.purchaseDate)))).sort((a, b) => {
+      if (a === "UNSPECIFIED") return 1;
+      if (b === "UNSPECIFIED") return -1;
+      return Number(b) - Number(a);
+    });
+    const typeOptions = Object.values(AssetType).filter((type) => assets.some((asset) => asset.type === type));
+    const departmentOptions = Array.from(new Set(assets.map(getAssetDepartment))).sort();
+    const branchOptions = Array.from(new Set(assets.map(getAssetBranch))).sort();
+    const statusOptions = Object.values(AssetStatus).filter((status) => assets.some((asset) => asset.status === status));
+    const dashboardAssets = assets.filter((asset) => {
+      if (dashboardFilters.year !== "ALL" && purchaseYearValue(asset.purchaseDate) !== dashboardFilters.year) return false;
+      if (dashboardFilters.type !== "ALL" && asset.type !== dashboardFilters.type) return false;
+      if (dashboardFilters.department !== "ALL" && getAssetDepartment(asset) !== dashboardFilters.department) return false;
+      if (dashboardFilters.branch !== "ALL" && getAssetBranch(asset) !== dashboardFilters.branch) return false;
+      if (dashboardFilters.status !== "ALL" && asset.status !== dashboardFilters.status) return false;
+      return true;
+    });
+    const dashboardStats = {
+      total: dashboardAssets.length,
+      inUse: dashboardAssets.filter((asset) => isInUseStatus(asset.status)).length,
+      inStock: dashboardAssets.filter((asset) => isAvailableStatus(asset.status)).length,
+      repair: dashboardAssets.filter((asset) => isBrokenStatus(asset.status)).length
+    };
+    const statusChartRows = chartRowsFromCounts(countBy(dashboardAssets, (asset) => statusGroupLabel(asset.status)));
+    const typeChartRows = chartRowsFromCounts(countBy(dashboardAssets, (asset) => typeText[asset.type]));
+    const yearChartRows = chartRowsFromCounts(countBy(dashboardAssets, (asset) => purchaseYearLabel(asset.purchaseDate)));
+    const departmentChartRows = chartRowsFromCounts(countBy(dashboardAssets, getAssetDepartment));
+    const branchChartRows = chartRowsFromCounts(countBy(dashboardAssets, getAssetBranch));
+    const chartMax = Math.max(
+      1,
+      ...statusChartRows.map((row) => row.value),
+      ...typeChartRows.map((row) => row.value),
+      ...yearChartRows.map((row) => row.value),
+      ...departmentChartRows.map((row) => row.value),
+      ...branchChartRows.map((row) => row.value)
+    );
+    const warrantySoon = dashboardAssets.filter((asset) => {
       if (!asset.warrantyUntil) return false;
       const daysLeft = Math.ceil((new Date(asset.warrantyUntil).getTime() - Date.now()) / 86_400_000);
       return daysLeft >= 0 && daysLeft <= 90;
     }).length;
 
-    const unassigned = assets.filter((asset) => !asset.assignedTo).length;
-    const retired = assets.filter(
+    const unassigned = dashboardAssets.filter((asset) => !asset.assignedTo).length;
+    const retired = dashboardAssets.filter(
       (asset) =>
         asset.status === AssetStatus.RETIRED ||
         asset.status === AssetStatus.PENDING_DISPOSAL ||
@@ -511,7 +637,7 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
         asset.status === AssetStatus.LOST
     ).length;
     const purchaseYearRows = Object.values(
-      assets.reduce<
+      dashboardAssets.reduce<
         Record<
           string,
           {
@@ -552,7 +678,7 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
       return b.sortYear - a.sortYear;
     });
     const purchaseTypeRows = Object.values(
-      assets.reduce<
+      dashboardAssets.reduce<
         Record<
           string,
           {
@@ -604,6 +730,72 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
 
     return (
       <section className="dashboardStack" aria-label="Dashboard overview">
+        <section className="panel modulePanel">
+          <div className="panelHeader">
+            <h2>Dashboard Filters</h2>
+            <p>กรองภาพรวมตามปีที่ซื้อ ประเภท แผนก สาขา และสถานะ</p>
+          </div>
+          <div className="filterGrid">
+            <label>
+              ปีที่ซื้อ
+              <select value={dashboardFilters.year} onChange={(event) => setDashboardFilter("year", event.target.value)}>
+                <option value="ALL">ทุกปี</option>
+                {yearOptions.map((year) => (
+                  <option key={year} value={year}>
+                    {purchaseYearOptionLabel(year)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              ประเภท
+              <select value={dashboardFilters.type} onChange={(event) => setDashboardFilter("type", event.target.value)}>
+                <option value="ALL">ทุกประเภท</option>
+                {typeOptions.map((type) => (
+                  <option key={type} value={type}>
+                    {typeText[type]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              แผนก
+              <select value={dashboardFilters.department} onChange={(event) => setDashboardFilter("department", event.target.value)}>
+                <option value="ALL">ทุกแผนก</option>
+                {departmentOptions.map((department) => (
+                  <option key={department} value={department}>
+                    {department}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              สาขา
+              <select value={dashboardFilters.branch} onChange={(event) => setDashboardFilter("branch", event.target.value)}>
+                <option value="ALL">ทุกสาขา</option>
+                {branchOptions.map((branch) => (
+                  <option key={branch} value={branch}>
+                    {branch}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              สถานะ
+              <select value={dashboardFilters.status} onChange={(event) => setDashboardFilter("status", event.target.value)}>
+                <option value="ALL">ทุกสถานะ</option>
+                {statusOptions.map((status) => (
+                  <option key={status} value={status}>
+                    {statusText[status]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button className="secondary filterReset" type="button" onClick={() => setDashboardFilters(defaultDashboardFilters)}>
+              ล้าง Filter
+            </button>
+          </div>
+        </section>
         <div className="dashboardGrid">
         <div className="panel modulePanel">
           <div className="panelHeader">
@@ -613,19 +805,19 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
           <div className="metricGrid">
             <div className="metric">
               <span>Total Assets</span>
-              <strong>{visibleStats.total}</strong>
+              <strong>{dashboardStats.total}</strong>
             </div>
             <div className="metric">
               <span>In Use</span>
-              <strong>{visibleStats.inUse}</strong>
+              <strong>{dashboardStats.inUse}</strong>
             </div>
             <div className="metric">
               <span>Ready / Stock</span>
-              <strong>{visibleStats.inStock}</strong>
+              <strong>{dashboardStats.inStock}</strong>
             </div>
             <div className="metric">
               <span>Repair</span>
-              <strong>{visibleStats.repair}</strong>
+              <strong>{dashboardStats.repair}</strong>
             </div>
           </div>
         </div>
@@ -650,6 +842,45 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
             </div>
           </div>
         </div>
+        </div>
+
+        <section className="dashboardCharts">
+          <div className="panel modulePanel">
+            <div className="panelHeader">
+              <h2>สถานะการใช้งาน</h2>
+              <p>ใช้งาน พัง/ซ่อม ว่าง และสถานะอื่น ๆ ตาม filter</p>
+            </div>
+            {renderBarChart(statusChartRows, chartMax)}
+          </div>
+          <div className="panel modulePanel">
+            <div className="panelHeader">
+              <h2>ประเภทอุปกรณ์</h2>
+              <p>จำนวนอุปกรณ์แยกตามประเภท</p>
+            </div>
+            {renderBarChart(typeChartRows, chartMax)}
+          </div>
+          <div className="panel modulePanel">
+            <div className="panelHeader">
+              <h2>ปีที่ซื้อ</h2>
+              <p>จำนวนอุปกรณ์แยกตามปีที่ซื้อ</p>
+            </div>
+            {renderBarChart(yearChartRows, chartMax)}
+          </div>
+          <div className="panel modulePanel">
+            <div className="panelHeader">
+              <h2>แผนก</h2>
+              <p>จำนวนอุปกรณ์แยกตามแผนก</p>
+            </div>
+            {renderBarChart(departmentChartRows, chartMax)}
+          </div>
+          <div className="panel modulePanel">
+            <div className="panelHeader">
+              <h2>สาขา</h2>
+              <p>จำนวนอุปกรณ์แยกตามสาขา</p>
+            </div>
+            {renderBarChart(branchChartRows, chartMax)}
+          </div>
+        </section>
 
         <div className="panel modulePanel">
           <div className="panelHeader">
@@ -719,7 +950,6 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
             </table>
             {purchaseTypeRows.length === 0 ? <div className="empty">ยังไม่มีข้อมูลแยกตามประเภท</div> : null}
           </div>
-        </div>
         </div>
       </section>
     );

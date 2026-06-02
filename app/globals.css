@@ -248,6 +248,24 @@ h1 {
   gap: 18px;
 }
 
+.dashboardCharts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.filterGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(140px, 1fr)) auto;
+  gap: 12px;
+  align-items: end;
+  padding: 16px;
+}
+
+.filterReset {
+  min-width: 108px;
+}
+
 .moduleGrid {
   display: grid;
   grid-template-columns: minmax(280px, 420px) minmax(0, 1fr);
@@ -360,6 +378,43 @@ h1 {
 
 .recordItem small {
   font-size: 12px;
+}
+
+.barChart {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.barRow {
+  display: grid;
+  gap: 6px;
+}
+
+.barLabel {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.barLabel strong {
+  color: var(--text);
+}
+
+.barTrack {
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e8eef6;
+}
+
+.barFill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--brand);
 }
 
 .buttonLink {
@@ -521,6 +576,7 @@ th {
   .topbar,
   .layout,
   .dashboardGrid,
+  .dashboardCharts,
   .moduleGrid {
     grid-template-columns: 1fr;
   }
@@ -542,6 +598,7 @@ th {
 
   .stats,
   .metricGrid,
+  .filterGrid,
   .formGrid {
     grid-template-columns: 1fr;
   }

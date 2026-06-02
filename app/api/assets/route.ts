@@ -7,6 +7,11 @@ import { writeAuditLog } from "@/lib/audit";
 
 export async function GET() {
   const assets = await prisma.asset.findMany({
+    include: {
+      branch: true,
+      category: true,
+      department: true
+    },
     orderBy: [{ updatedAt: "desc" }, { assetTag: "asc" }]
   });
 
