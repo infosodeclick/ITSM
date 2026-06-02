@@ -396,6 +396,7 @@ model Asset {
   storage           String?
   os                String?
   assignedTo        String?
+  userPosition      String?
   location          String?
   purchaseDate      DateTime?
   purchasePrice     Decimal?       @db.Decimal(12, 2)

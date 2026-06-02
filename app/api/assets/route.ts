@@ -10,6 +10,7 @@ export async function GET() {
     include: {
       branch: true,
       category: true,
+      currentEmployee: true,
       department: true
     },
     orderBy: [{ updatedAt: "desc" }, { assetTag: "asc" }]

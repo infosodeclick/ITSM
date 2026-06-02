@@ -14,6 +14,7 @@ import {
   Branch,
   Budget,
   Department,
+  Employee,
   HrRequest,
   HrRequestStatus,
   HrRequestType,
@@ -36,6 +37,7 @@ type Stats = {
 type AssetWithLookups = Asset & {
   branch?: Branch | null;
   category?: AssetCategory | null;
+  currentEmployee?: Employee | null;
   department?: Department | null;
 };
 
@@ -77,8 +79,10 @@ type AssetForm = {
   manufacturer: string;
   model: string;
   assignedTo: string;
+  userPosition: string;
   location: string;
   purchaseDate: string;
+  purchasePrice: string;
   warrantyUntil: string;
   notes: string;
 };
@@ -126,8 +130,10 @@ const emptyForm: AssetForm = {
   manufacturer: "",
   model: "",
   assignedTo: "",
+  userPosition: "",
   location: "",
   purchaseDate: "",
+  purchasePrice: "",
   warrantyUntil: "",
   notes: ""
 };
@@ -304,6 +310,13 @@ function formatDate(value: Date | string | null) {
   return new Intl.DateTimeFormat("th-TH", { dateStyle: "medium" }).format(new Date(value));
 }
 
+function formatMoney(value: unknown) {
+  if (value === null || value === undefined || value === "") return "-";
+  const amount = Number(value);
+  if (Number.isNaN(amount)) return String(value);
+  return new Intl.NumberFormat("th-TH", { maximumFractionDigits: 2 }).format(amount);
+}
+
 function statusClass(status: AssetStatus) {
   if (
     status === AssetStatus.REPAIR ||
@@ -433,7 +446,16 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
     if (!normalizedQuery) return assets;
 
     return assets.filter((asset) =>
-      [asset.assetTag, asset.name, asset.serialNumber, asset.assignedTo, asset.location, asset.manufacturer, asset.model]
+      [
+        asset.assetTag,
+        asset.name,
+        asset.serialNumber,
+        asset.assignedTo,
+        asset.userPosition,
+        asset.location,
+        asset.manufacturer,
+        asset.model
+      ]
         .filter(Boolean)
         .some((value) => value!.toLowerCase().includes(normalizedQuery))
     );
@@ -1537,6 +1559,10 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
                 <input value={form.assignedTo} onChange={(event) => setField("assignedTo", event.target.value)} />
               </label>
               <label>
+                Position
+                <input value={form.userPosition} onChange={(event) => setField("userPosition", event.target.value)} />
+              </label>
+              <label>
                 สถานที่
                 <input value={form.location} onChange={(event) => setField("location", event.target.value)} />
               </label>
@@ -1546,6 +1572,17 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
                   type="date"
                   value={form.purchaseDate}
                   onChange={(event) => setField("purchaseDate", event.target.value)}
+                />
+              </label>
+              <label>
+                Price
+                <input
+                  inputMode="decimal"
+                  min="0"
+                  step="0.01"
+                  type="number"
+                  value={form.purchasePrice}
+                  onChange={(event) => setField("purchasePrice", event.target.value)}
                 />
               </label>
               <label className="span2">
@@ -1584,7 +1621,8 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
                   <th>ทรัพย์สิน</th>
                   <th>ประเภท</th>
                   <th>สถานะ</th>
-                  <th>ผู้ถือครอง/สถานที่</th>
+                  <th>User / Position / Location</th>
+                  <th>Price</th>
                   <th>รับประกัน</th>
                   <th>จัดการ</th>
                 </tr>
@@ -1609,9 +1647,11 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
                       <span className={statusClass(asset.status)}>{statusText[asset.status]}</span>
                     </td>
                     <td>
-                      <div>{asset.assignedTo ?? "-"}</div>
-                      <div className="small">{asset.location ?? "-"}</div>
+                      <div>{asset.assignedTo ?? asset.currentEmployee?.fullName ?? "-"}</div>
+                      <div className="small">{asset.userPosition ?? asset.currentEmployee?.position ?? "-"}</div>
+                      <div className="small">{asset.branch?.name ?? asset.location ?? "-"}</div>
                     </td>
+                    <td>{formatMoney(asset.purchasePrice)}</td>
                     <td>{formatDate(asset.warrantyUntil)}</td>
                     <td>
                       <div className="actions">

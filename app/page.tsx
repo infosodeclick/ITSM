@@ -26,6 +26,7 @@ export default async function Home() {
     include: {
       branch: true,
       category: true,
+      currentEmployee: true,
       department: true
     },
     orderBy: [{ updatedAt: "desc" }, { assetTag: "asc" }]

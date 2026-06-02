@@ -1,4 +1,22 @@
 import { prisma } from "@/lib/prisma";
+import { AssetStatus } from "@prisma/client";
+
+const statusText: Record<AssetStatus, string> = {
+  IN_STOCK: "พร้อมใช้",
+  READY_TO_USE: "Ready to Use",
+  ASSIGNED: "Assigned",
+  IN_USE: "ใช้งาน",
+  TRANSFERRED: "โอนย้าย",
+  RETURNED: "รับคืนแล้ว",
+  REPAIR: "รอซ่อม",
+  WAITING_REPAIR: "รอส่งซ่อม",
+  REPAIRING: "อยู่ระหว่างซ่อม",
+  SPARE: "เครื่องสำรอง",
+  RETIRED: "เลิกใช้งาน",
+  PENDING_DISPOSAL: "รอจำหน่าย",
+  DISPOSED: "จำหน่ายแล้ว",
+  LOST: "สูญหาย"
+};
 
 function csvCell(value: unknown) {
   if (value === null || value === undefined) return "";
@@ -6,24 +24,38 @@ function csvCell(value: unknown) {
   return `"${text.replaceAll('"', '""')}"`;
 }
 
+function purchaseYear(value: Date | null) {
+  if (!value) return "";
+  const year = value.getFullYear();
+  return Number.isNaN(year) ? "" : String(year + 543);
+}
+
 export async function GET() {
   const assets = await prisma.asset.findMany({
+    include: {
+      branch: true,
+      currentEmployee: true
+    },
     orderBy: [{ assetTag: "asc" }]
   });
 
-  const header = ["Asset Tag", "Name", "Type", "Status", "Serial Number", "Assigned To", "Location", "Warranty Until"];
-  const rows = assets.map((asset) => [
-    asset.assetTag,
-    asset.name,
-    asset.type,
-    asset.status,
+  const header = ["NO.", "Asset", "S/N", "User", "Position", "Location", "Years", "Status", "Brand", "Model", "Notation", "Price"];
+  const rows = assets.map((asset, index) => [
+    index + 1,
+    `${asset.assetTag} - ${asset.name}`,
     asset.serialNumber,
-    asset.assignedTo,
-    asset.location,
-    asset.warrantyUntil
+    asset.assignedTo ?? asset.currentEmployee?.fullName,
+    asset.userPosition ?? asset.currentEmployee?.position,
+    asset.branch?.name ?? asset.location,
+    purchaseYear(asset.purchaseDate),
+    statusText[asset.status],
+    asset.manufacturer,
+    asset.model,
+    asset.notes,
+    asset.purchasePrice
   ]);
 
-  const csv = [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
+  const csv = `\uFEFF${[header, ...rows].map((row) => row.map(csvCell).join(",")).join("\n")}`;
 
   return new Response(csv, {
     headers: {

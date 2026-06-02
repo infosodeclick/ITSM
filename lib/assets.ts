@@ -1,4 +1,4 @@
-import { AssetStatus, AssetType } from "@prisma/client";
+import { AssetStatus, AssetType, Prisma } from "@prisma/client";
 import { z } from "zod";
 
 const optionalText = z
@@ -14,6 +14,20 @@ const optionalDate = z
   .transform((value) => (value ? new Date(value) : null))
   .refine((value) => value === null || !Number.isNaN(value.getTime()), "Invalid date");
 
+const optionalDecimal = z
+  .union([z.string(), z.number()])
+  .optional()
+  .transform((value, context) => {
+    if (value === undefined || value === null || String(value).trim() === "") return null;
+
+    try {
+      return new Prisma.Decimal(String(value).replaceAll(",", "").trim());
+    } catch {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "Invalid amount" });
+      return z.NEVER;
+    }
+  });
+
 const assetFieldsSchema = {
   name: z.string().trim().min(2).max(120),
   type: z.nativeEnum(AssetType).default(AssetType.OTHER),
@@ -22,8 +36,10 @@ const assetFieldsSchema = {
   manufacturer: optionalText,
   model: optionalText,
   assignedTo: optionalText,
+  userPosition: optionalText,
   location: optionalText,
   purchaseDate: optionalDate,
+  purchasePrice: optionalDecimal,
   warrantyUntil: optionalDate,
   notes: optionalText
 };
