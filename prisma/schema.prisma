@@ -135,6 +135,7 @@ model RolePermission {
 
 model User {
   id            String     @id @default(cuid())
+  username      String?    @unique
   email         String     @unique
   name          String
   passwordHash  String?
@@ -149,6 +150,7 @@ model User {
 
   @@index([roleId])
   @@index([isActive])
+  @@index([username])
 }
 
 model Branch {

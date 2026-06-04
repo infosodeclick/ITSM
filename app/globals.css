@@ -1,14 +1,17 @@
 :root {
   color-scheme: light;
-  --bg: #f5f7fb;
+  --bg: #f6f7fb;
   --panel: #ffffff;
-  --panel-soft: #eef4ff;
+  --panel-soft: #f1f6ff;
   --text: #172033;
-  --muted: #5e6b81;
+  --muted: #667085;
   --line: #d9e1ee;
-  --brand: #176c5f;
-  --brand-strong: #0e4c43;
-  --warning: #a35c00;
+  --brand: #00a6a6;
+  --brand-strong: #087c82;
+  --accent: #7c3aed;
+  --accent-soft: #efe8ff;
+  --pink: #ff5da2;
+  --warning: #b65c00;
   --danger: #b42318;
   --ok: #137333;
 }
@@ -37,6 +40,79 @@ body {
 .blankPage p {
   margin: 0;
   font-size: 14px;
+}
+
+.loginPage {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
+  min-height: 100vh;
+  background: #ffffff;
+}
+
+.loginVisual {
+  display: grid;
+  align-items: end;
+  min-height: 100vh;
+  padding: 56px;
+  background:
+    linear-gradient(145deg, rgba(0, 166, 166, 0.92), rgba(124, 58, 237, 0.82)),
+    radial-gradient(circle at 80% 18%, rgba(255, 255, 255, 0.28), transparent 28%),
+    #00a6a6;
+  color: white;
+}
+
+.loginBrand {
+  max-width: 680px;
+}
+
+.loginBrand span {
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.loginBrand h1 {
+  margin-top: 14px;
+  font-size: clamp(38px, 6vw, 72px);
+  line-height: 1;
+}
+
+.loginBrand p {
+  max-width: 560px;
+  margin: 18px 0 0;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 18px;
+  line-height: 1.7;
+}
+
+.loginPanel {
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background: #fbfcff;
+}
+
+.loginCard {
+  display: grid;
+  width: min(100%, 440px);
+  gap: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 26px;
+  background: white;
+  box-shadow: 0 24px 80px rgba(16, 24, 40, 0.12);
+}
+
+.loginCard h2 {
+  margin: 0;
+  font-size: 30px;
+}
+
+.loginCard p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
 }
 
 button,
@@ -105,7 +181,7 @@ label {
 
 .appShell {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-columns: 250px minmax(0, 1fr);
   min-height: 100vh;
 }
 
@@ -142,20 +218,206 @@ label {
   margin-top: 14px;
 }
 
+.navButton,
 .navList a {
   min-height: 38px;
   border-radius: 6px;
   padding: 10px 11px;
+  border: 0;
+  background: transparent;
   color: var(--muted);
   font-size: 14px;
   font-weight: 700;
+  text-align: left;
   text-decoration: none;
 }
 
+.navButton:hover,
+.navButton.active,
 .navList a:hover,
 .navList a.active {
-  background: #e8f3f1;
+  background: linear-gradient(90deg, rgba(0, 166, 166, 0.13), rgba(124, 58, 237, 0.09));
   color: var(--brand-strong);
+}
+
+.sidebarFooter {
+  display: grid;
+  gap: 8px;
+  margin-top: 20px;
+  border-top: 1px solid var(--line);
+  padding: 14px 8px 0;
+}
+
+.sidebarFooter span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.sidebarFooter strong {
+  color: var(--text);
+}
+
+.dashboardPage {
+  display: grid;
+  gap: 16px;
+}
+
+.dashboardHero {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  border: 1px solid rgba(0, 166, 166, 0.2);
+  border-radius: 8px;
+  padding: 22px;
+  background:
+    linear-gradient(135deg, rgba(0, 166, 166, 0.12), rgba(124, 58, 237, 0.08)),
+    #ffffff;
+}
+
+.dashboardHero p {
+  margin: 10px 0 0;
+  color: var(--muted);
+}
+
+.userPill {
+  display: grid;
+  min-width: 160px;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: white;
+}
+
+.userPill span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.statStrip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.statStrip div {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  background: white;
+  box-shadow: 0 10px 30px rgba(16, 24, 40, 0.05);
+}
+
+.statStrip span {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.statStrip strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--text);
+  font-size: 32px;
+}
+
+.dashboardChartsTop {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.chartRows {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.chartRow,
+.yearBlock {
+  display: grid;
+  gap: 8px;
+}
+
+.canvaFill {
+  background: linear-gradient(90deg, var(--brand), var(--accent), var(--pink));
+}
+
+.stackBar {
+  display: flex;
+  height: 15px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e8eef6;
+}
+
+.stackBar span {
+  display: block;
+  min-width: 0;
+}
+
+.stackUse {
+  background: var(--brand);
+}
+
+.stackBad {
+  background: var(--danger);
+}
+
+.stackFree {
+  background: var(--accent);
+}
+
+.donutWrap {
+  display: grid;
+  grid-template-columns: 170px minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+  padding: 18px;
+}
+
+.donut {
+  display: grid;
+  place-items: center;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, #ffffff 0 48%, transparent 49%),
+    conic-gradient(var(--brand), var(--accent), var(--pink), var(--brand));
+  box-shadow: inset 0 0 0 1px rgba(16, 24, 40, 0.06);
+}
+
+.donut strong {
+  align-self: end;
+  font-size: 34px;
+}
+
+.donut span {
+  align-self: start;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.legendList {
+  display: grid;
+  gap: 8px;
+}
+
+.legendList div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #fbfcff;
 }
 
 .page {
@@ -674,6 +936,15 @@ th {
 }
 
 @media (max-width: 900px) {
+  .loginPage {
+    grid-template-columns: 1fr;
+  }
+
+  .loginVisual {
+    min-height: 42vh;
+    padding: 32px;
+  }
+
   .appShell {
     grid-template-columns: 1fr;
   }
@@ -697,6 +968,7 @@ th {
   .dashboardGrid,
   .dashboardCharts,
   .dashboardTopGrid,
+  .dashboardChartsTop,
   .moduleGrid {
     grid-template-columns: 1fr;
   }
@@ -708,6 +980,10 @@ th {
   .stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .statStrip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 620px) {
@@ -717,11 +993,21 @@ th {
   }
 
   .stats,
+  .statStrip,
   .metricGrid,
   .budgetMetrics,
   .filterGrid,
   .formGrid {
     grid-template-columns: 1fr;
+  }
+
+  .dashboardHero,
+  .donutWrap {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboardHero {
+    display: grid;
   }
 
   .span2 {

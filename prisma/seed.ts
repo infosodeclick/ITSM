@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { hashPassword } from "../lib/auth";
 
 const prisma = new PrismaClient();
 
@@ -141,13 +142,57 @@ async function main() {
   });
 
   const adminRole = createdRoles.find((role) => role.name === "SUPER_ADMIN");
+  const hrRole = createdRoles.find((role) => role.name === "HR");
+  const itRole = createdRoles.find((role) => role.name === "IT_ADMIN");
+
+  const defaultUsers = [
+    ["administrator", "Administrator", "Wdc@2026", adminRole?.id],
+    ["userhr", "HR User", "wdc@1234", hrRole?.id],
+    ["userit", "IT User", "wdc@1234", itRole?.id]
+  ] as const;
+
+  for (const [username, name, password, roleId] of defaultUsers) {
+    if (!roleId) continue;
+    const email = `${username}@local.itsm`;
+    const existing = await prisma.user.findFirst({
+      where: { OR: [{ username }, { email }] }
+    });
+
+    if (existing) {
+      await prisma.user.update({
+        where: { id: existing.id },
+        data: {
+          username,
+          email,
+          name,
+          roleId,
+          isActive: true,
+          passwordHash: existing.passwordHash ?? hashPassword(password)
+        }
+      });
+    } else {
+      await prisma.user.create({
+        data: {
+          username,
+          email,
+          name,
+          roleId,
+          isActive: true,
+          passwordHash: hashPassword(password)
+        }
+      });
+    }
+  }
+
   await prisma.user.upsert({
     where: { email: "admin@example.com" },
-    update: { name: "System Admin", roleId: adminRole?.id },
+    update: { name: "System Admin", roleId: adminRole?.id, username: "admin" },
     create: {
+      username: "admin",
       email: "admin@example.com",
       name: "System Admin",
-      roleId: adminRole?.id
+      roleId: adminRole?.id,
+      passwordHash: hashPassword("admin")
     }
   });
 

@@ -1,0 +1,557 @@
+"use client";
+
+import { FormEvent, useEffect, useMemo, useState } from "react";
+
+type UserRole = "SUPER_ADMIN" | "IT_ADMIN" | "IT_STAFF" | "HR" | "MANAGER" | "VIEWER";
+
+type AppUser = {
+  id: string;
+  username: string | null;
+  name: string;
+  role: UserRole;
+};
+
+type StatusCount = {
+  status: string;
+  label: string;
+  count: number;
+};
+
+type YearSummary = {
+  year: number;
+  total: number;
+  inUse: number;
+  damaged: number;
+  spare: number;
+  budget: number;
+};
+
+type Asset = {
+  id: string;
+  assetTag: string;
+  name: string;
+  status: string;
+  manufacturer: string | null;
+  model: string | null;
+  purchaseDate: string | null;
+  purchasePrice: string | number | null;
+  warrantyUntil: string | null;
+  assignedTo: string | null;
+  location: string | null;
+  branch?: { name: string } | null;
+  department?: { name: string } | null;
+};
+
+type AppData = {
+  user: AppUser;
+  dashboard: {
+    employeeCount: number;
+    assetCount: number;
+    expiredWarranty: number;
+    coveredWarranty: number;
+    statusCounts: StatusCount[];
+    assetsByYear: YearSummary[];
+    totalBudgetActual: number;
+    totalBudgetAllocated: number;
+  };
+  filters: {
+    years: number[];
+    departments: string[];
+    branches: string[];
+    statuses: StatusCount[];
+  };
+  assets: Asset[];
+  employees: Array<{ id: string; fullName: string; position: string | null; isActive: boolean }>;
+  budgets: Array<{ id: string; fiscalYear: number; category: string; actual: string | number; allocated: string | number }>;
+  auditLogs: Array<{ id: string; module: string; action: string; status: string; createdAt: string }>;
+  users: Array<{ id: string; username: string | null; name: string; role: UserRole; isActive: boolean }>;
+  roles: Array<{ id: string; name: UserRole; description: string | null }>;
+  hrRequests: Array<{ id: string; employeeName: string; department: string | null; status: string; createdAt: string }>;
+  movements: Array<{ id: string; type: string; assetName: string | null; toHolder: string | null; movedAt: string }>;
+};
+
+type MenuKey = "dashboard" | "assets" | "newEmployee" | "transfer" | "return" | "audit" | "users";
+
+const menuItems: Array<{ key: MenuKey; label: string; roles: UserRole[] }> = [
+  { key: "dashboard", label: "แดชบอร์ด", roles: ["SUPER_ADMIN", "IT_ADMIN", "IT_STAFF", "HR"] },
+  { key: "assets", label: "Assets", roles: ["SUPER_ADMIN", "IT_ADMIN", "IT_STAFF"] },
+  { key: "newEmployee", label: "New Employee Request", roles: ["SUPER_ADMIN", "IT_ADMIN", "IT_STAFF", "HR"] },
+  { key: "transfer", label: "Assign / Transfer", roles: ["SUPER_ADMIN", "IT_ADMIN", "IT_STAFF"] },
+  { key: "return", label: "Return", roles: ["SUPER_ADMIN", "IT_ADMIN", "IT_STAFF"] },
+  { key: "audit", label: "Audit Log", roles: ["SUPER_ADMIN", "IT_ADMIN", "IT_STAFF", "HR"] },
+  { key: "users", label: "Users & Roles", roles: ["SUPER_ADMIN"] }
+];
+
+function canView(role: UserRole, roles: UserRole[]) {
+  return roles.includes(role);
+}
+
+function formatMoney(value: number | string | null | undefined) {
+  return new Intl.NumberFormat("th-TH", { maximumFractionDigits: 0 }).format(Number(value ?? 0));
+}
+
+function purchaseYear(value: string | null) {
+  if (!value) return "";
+  const year = new Date(value).getFullYear();
+  return Number.isNaN(year) ? "" : String(year);
+}
+
+function roleLabel(role?: UserRole) {
+  const labels: Partial<Record<UserRole, string>> = {
+    SUPER_ADMIN: "Admin",
+    IT_ADMIN: "IT",
+    IT_STAFF: "IT",
+    HR: "HR",
+    MANAGER: "Manager",
+    VIEWER: "Viewer"
+  };
+  return role ? labels[role] ?? role : "-";
+}
+
+function LoginPanel({ onLogin }: { onLogin: (data: AppData) => void }) {
+  const [username, setUsername] = useState("administrator");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
+
+    const response = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password })
+    });
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      setError(body?.error ?? "เข้าสู่ระบบไม่สำเร็จ");
+      setLoading(false);
+      return;
+    }
+
+    const appResponse = await fetch("/api/app");
+    if (!appResponse.ok) {
+      setError("เข้าสู่ระบบแล้ว แต่โหลดข้อมูลระบบไม่สำเร็จ");
+      setLoading(false);
+      return;
+    }
+
+    onLogin(await appResponse.json());
+    setLoading(false);
+  }
+
+  return (
+    <main className="loginPage">
+      <section className="loginVisual" aria-label="IT Service Management">
+        <div className="loginBrand">
+          <span>IT Service Management</span>
+          <h1>จัดการงาน IT และทรัพย์สินในที่เดียว</h1>
+          <p>Dashboard, Assets, HR Request, Transfer, Return, Audit Log และ Users & Roles พร้อมต่อยอดทีละระบบ</p>
+        </div>
+      </section>
+      <section className="loginPanel" aria-label="Login form">
+        <form className="loginCard" onSubmit={submit}>
+          <div>
+            <p className="eyebrow">Secure Access</p>
+            <h2>เข้าสู่ระบบ</h2>
+            <p>ใช้บัญชีที่ได้รับสิทธิ์เพื่อเข้าใช้งานระบบ ITSM</p>
+          </div>
+          <label>
+            Username
+            <input value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" />
+          </label>
+          <label>
+            Password
+            <input
+              value={password}
+              type="password"
+              onChange={(event) => setPassword(event.target.value)}
+              autoComplete="current-password"
+            />
+          </label>
+          {error ? <p className="notice error">{error}</p> : null}
+          <button type="submit" disabled={loading}>{loading ? "กำลังตรวจสอบ..." : "Login"}</button>
+        </form>
+      </section>
+    </main>
+  );
+}
+
+function Dashboard({ data }: { data: AppData }) {
+  const [year, setYear] = useState("all");
+  const [department, setDepartment] = useState("all");
+  const [branch, setBranch] = useState("all");
+  const [status, setStatus] = useState("all");
+
+  const filteredAssets = useMemo(() => {
+    return data.assets.filter((asset) => {
+      const assetYear = purchaseYear(asset.purchaseDate);
+      const assetDepartment = asset.department?.name ?? "";
+      const assetBranch = asset.branch?.name ?? asset.location ?? "";
+      return (
+        (year === "all" || assetYear === year) &&
+        (department === "all" || assetDepartment === department) &&
+        (branch === "all" || assetBranch === branch) &&
+        (status === "all" || asset.status === status)
+      );
+    });
+  }, [branch, data.assets, department, status, year]);
+
+  const budgetByYear = data.dashboard.assetsByYear;
+  const maxAssets = Math.max(...budgetByYear.map((item) => item.total), 1);
+  const maxBudget = Math.max(...budgetByYear.map((item) => item.budget), 1);
+  const statusTotal = data.dashboard.statusCounts.reduce((sum, item) => sum + item.count, 0) || 1;
+
+  return (
+    <section className="dashboardPage">
+      <div className="dashboardHero">
+        <div>
+          <p className="eyebrow">Dashboard</p>
+          <h1>ภาพรวม IT Service Management</h1>
+          <p>ดูจำนวนพนักงาน อุปกรณ์ Warranty สถานะเครื่อง และงบประมาณแยกตามปี</p>
+        </div>
+        <div className="userPill">
+          <span>{data.user.name}</span>
+          <strong>{roleLabel(data.user.role)}</strong>
+        </div>
+      </div>
+
+      <div className="statStrip">
+        <div><span>พนักงาน</span><strong>{data.dashboard.employeeCount}</strong></div>
+        <div><span>อุปกรณ์ IT</span><strong>{data.dashboard.assetCount}</strong></div>
+        <div><span>หมดประกัน</span><strong>{data.dashboard.expiredWarranty}</strong></div>
+        <div><span>เหลือประกัน</span><strong>{data.dashboard.coveredWarranty}</strong></div>
+      </div>
+
+      <div className="dashboardChartsTop">
+        <section className="panel">
+          <div className="panelHeader">
+            <h2>งบประมาณทรัพย์สิน IT แยกตามปี</h2>
+            <p>ยอด actual spending จากตาราง Budget</p>
+          </div>
+          <div className="chartRows">
+            {budgetByYear.length ? budgetByYear.map((item) => (
+              <div className="chartRow" key={item.year}>
+                <div className="barLabel"><strong>{item.year}</strong><span>{formatMoney(item.budget)} บาท</span></div>
+                <div className="barTrack"><span className="barFill canvaFill" style={{ width: `${Math.max(6, (item.budget / maxBudget) * 100)}%` }} /></div>
+              </div>
+            )) : <p className="empty">ยังไม่มีข้อมูลงบประมาณ</p>}
+          </div>
+        </section>
+
+        <section className="panel">
+          <div className="panelHeader">
+            <h2>สถานะเครื่อง</h2>
+            <p>สัดส่วนสถานะอุปกรณ์ในระบบ</p>
+          </div>
+          <div className="donutWrap">
+            <div className="donut">
+              <strong>{data.dashboard.assetCount}</strong>
+              <span>เครื่อง</span>
+            </div>
+            <div className="legendList">
+              {data.dashboard.statusCounts.length ? data.dashboard.statusCounts.map((item) => (
+                <div key={item.status}>
+                  <span>{item.label}</span>
+                  <strong>{item.count} ({Math.round((item.count / statusTotal) * 100)}%)</strong>
+                </div>
+              )) : <p className="empty">ยังไม่มีสถานะเครื่อง</p>}
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section className="panel">
+        <div className="panelHeader">
+          <h2>Dashboard Filters</h2>
+          <p>กรองข้อมูลตามปีซื้อ แผนก สาขา และสถานะ</p>
+        </div>
+        <div className="filterGrid">
+          <label>ปีซื้อ
+            <select value={year} onChange={(event) => setYear(event.target.value)}>
+              <option value="all">ทั้งหมด</option>
+              {data.filters.years.map((item) => <option key={item} value={item}>{item}</option>)}
+            </select>
+          </label>
+          <label>แผนก
+            <select value={department} onChange={(event) => setDepartment(event.target.value)}>
+              <option value="all">ทั้งหมด</option>
+              {data.filters.departments.map((item) => <option key={item} value={item}>{item}</option>)}
+            </select>
+          </label>
+          <label>สาขา
+            <select value={branch} onChange={(event) => setBranch(event.target.value)}>
+              <option value="all">ทั้งหมด</option>
+              {data.filters.branches.map((item) => <option key={item} value={item}>{item}</option>)}
+            </select>
+          </label>
+          <label>สถานะ
+            <select value={status} onChange={(event) => setStatus(event.target.value)}>
+              <option value="all">ทั้งหมด</option>
+              {data.filters.statuses.map((item) => <option key={item.status} value={item.status}>{item.label}</option>)}
+            </select>
+          </label>
+          <button className="secondary" onClick={() => { setYear("all"); setDepartment("all"); setBranch("all"); setStatus("all"); }}>ล้าง Filter</button>
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="panelHeader">
+          <h2>จำนวนเครื่องตามปีที่ซื้อ</h2>
+          <p>แยกเครื่องใช้งาน พัง และว่าง/สต็อก</p>
+        </div>
+        <div className="chartRows">
+          {budgetByYear.length ? budgetByYear.map((item) => (
+            <div className="yearBlock" key={item.year}>
+              <div className="barLabel">
+                <strong>{item.year}</strong>
+                <span>{item.total} เครื่อง | ใช้ {item.inUse} | พัง {item.damaged} | ว่าง {item.spare}</span>
+              </div>
+              <div className="stackBar">
+                <span className="stackUse" style={{ width: `${Math.max(0, (item.inUse / maxAssets) * 100)}%` }} />
+                <span className="stackBad" style={{ width: `${Math.max(0, (item.damaged / maxAssets) * 100)}%` }} />
+                <span className="stackFree" style={{ width: `${Math.max(0, (item.spare / maxAssets) * 100)}%` }} />
+              </div>
+            </div>
+          )) : <p className="empty">ยังไม่มีข้อมูลตามปีซื้อ</p>}
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="panelHeader">
+          <h2>รายการตาม Filter</h2>
+          <p>พบ {filteredAssets.length} รายการ</p>
+        </div>
+        <div className="tableWrap">
+          <table>
+            <thead>
+              <tr><th>Asset</th><th>User</th><th>Location</th><th>Years</th><th>Status</th><th>Brand / Model</th></tr>
+            </thead>
+            <tbody>
+              {filteredAssets.slice(0, 12).map((asset) => (
+                <tr key={asset.id}>
+                  <td><strong>{asset.assetTag}</strong><br /><span className="small">{asset.name}</span></td>
+                  <td>{asset.assignedTo ?? "-"}</td>
+                  <td>{asset.branch?.name ?? asset.location ?? "-"}</td>
+                  <td>{purchaseYear(asset.purchaseDate) || "-"}</td>
+                  <td><span className="badge">{asset.status}</span></td>
+                  <td>{asset.manufacturer ?? "-"} {asset.model ?? ""}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  );
+}
+
+function PlaceholderPanel({ title, description, children }: { title: string; description: string; children?: React.ReactNode }) {
+  return (
+    <section className="panel">
+      <div className="panelHeader">
+        <h2>{title}</h2>
+        <p>{description}</p>
+      </div>
+      <div className="moduleBody">{children ?? <p className="moduleNote">หน้ารายละเอียดจะทำต่อเป็น feature แยก เพื่อไม่ให้กระทบระบบหลัก</p>}</div>
+    </section>
+  );
+}
+
+function AssetsPage({ data }: { data: AppData }) {
+  return (
+    <PlaceholderPanel title="Assets" description="รายการทรัพย์สิน IT เบื้องต้น">
+      <div className="tableWrap">
+        <table>
+          <thead><tr><th>Asset</th><th>User</th><th>Status</th><th>Warranty</th><th>Price</th></tr></thead>
+          <tbody>
+            {data.assets.slice(0, 20).map((asset) => (
+              <tr key={asset.id}>
+                <td><strong>{asset.assetTag}</strong><br /><span className="small">{asset.name}</span></td>
+                <td>{asset.assignedTo ?? "-"}</td>
+                <td><span className="badge">{asset.status}</span></td>
+                <td>{asset.warrantyUntil ? new Date(asset.warrantyUntil).toLocaleDateString("th-TH") : "-"}</td>
+                <td>{formatMoney(asset.purchasePrice)} บาท</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </PlaceholderPanel>
+  );
+}
+
+function UsersPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppData) => void }) {
+  const [message, setMessage] = useState("");
+
+  async function createUser(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage("");
+    const form = new FormData(event.currentTarget);
+    const response = await fetch("/api/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: form.get("username"),
+        name: form.get("name"),
+        password: form.get("password"),
+        roleId: form.get("roleId"),
+        email: form.get("email")
+      })
+    });
+
+    if (!response.ok) {
+      setMessage("สร้าง user ไม่สำเร็จ กรุณาตรวจข้อมูลซ้ำ");
+      return;
+    }
+
+    const appResponse = await fetch("/api/app");
+    onRefresh(await appResponse.json());
+    setMessage("สร้าง user สำเร็จ");
+    event.currentTarget.reset();
+  }
+
+  return (
+    <section className="moduleGrid">
+      <form className="panel form" onSubmit={createUser}>
+        <div className="panelHeader">
+          <h2>สร้าง User</h2>
+          <p>เฉพาะ Admin สูงสุดเท่านั้น</p>
+        </div>
+        <label>Username<input name="username" required minLength={3} /></label>
+        <label>ชื่อผู้ใช้<input name="name" required /></label>
+        <label>Email<input name="email" type="email" /></label>
+        <label>Password<input name="password" type="password" required minLength={8} /></label>
+        <label>Role
+          <select name="roleId" required>
+            {data.roles.map((role) => <option key={role.id} value={role.id}>{roleLabel(role.name)}</option>)}
+          </select>
+        </label>
+        {message ? <p className="notice">{message}</p> : null}
+        <button type="submit">สร้าง User</button>
+      </form>
+      <PlaceholderPanel title="Users & Roles" description="บัญชีผู้ใช้ในระบบ">
+        <div className="tableWrap">
+          <table>
+            <thead><tr><th>Username</th><th>Name</th><th>Role</th><th>Status</th></tr></thead>
+            <tbody>
+              {data.users.map((user) => (
+                <tr key={user.id}>
+                  <td>{user.username}</td>
+                  <td>{user.name}</td>
+                  <td>{roleLabel(user.role)}</td>
+                  <td>{user.isActive ? "Active" : "Disabled"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </PlaceholderPanel>
+    </section>
+  );
+}
+
+export default function ItsmConsole() {
+  const [data, setData] = useState<AppData | null>(null);
+  const [active, setActive] = useState<MenuKey>("dashboard");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/app")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body) => setData(body))
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    setData(null);
+    setActive("dashboard");
+  }
+
+  if (loading) {
+    return <main className="blankPage"><section><p>Loading ITSM...</p></section></main>;
+  }
+
+  if (!data) {
+    return <LoginPanel onLogin={setData} />;
+  }
+
+  const visibleMenu = menuItems.filter((item) => canView(data.user.role, item.roles));
+  const activeMenu = visibleMenu.some((item) => item.key === active) ? active : visibleMenu[0]?.key ?? "dashboard";
+
+  return (
+    <main className="appShell">
+      <aside className="sidebar">
+        <div className="brandBlock">
+          <span>WDC</span>
+          <strong>ITSM</strong>
+        </div>
+        <nav className="navList" aria-label="Main menu">
+          {visibleMenu.map((item) => (
+            <button className={activeMenu === item.key ? "active navButton" : "navButton"} key={item.key} onClick={() => setActive(item.key)}>
+              {item.label}
+            </button>
+          ))}
+        </nav>
+        <div className="sidebarFooter">
+          <span>{data.user.username}</span>
+          <strong>{roleLabel(data.user.role)}</strong>
+          <button className="secondary" onClick={logout}>Logout</button>
+        </div>
+      </aside>
+      <section className="page">
+        {activeMenu === "dashboard" ? <Dashboard data={data} /> : null}
+        {activeMenu === "assets" ? <AssetsPage data={data} /> : null}
+        {activeMenu === "newEmployee" ? (
+          <PlaceholderPanel title="New Employee Request" description="HR แจ้งพนักงานใหม่ และ IT ติดตามการเตรียมอุปกรณ์">
+            <div className="recordList">
+              {data.hrRequests.map((request) => (
+                <div className="recordItem" key={request.id}>
+                  <strong>{request.employeeName}</strong>
+                  <span>{request.department ?? "-"} | {request.status}</span>
+                </div>
+              ))}
+            </div>
+          </PlaceholderPanel>
+        ) : null}
+        {activeMenu === "transfer" ? (
+          <PlaceholderPanel title="Assign / Transfer" description="ส่งมอบหรือโอนย้ายอุปกรณ์">
+            <div className="recordList">
+              {data.movements.map((movement) => (
+                <div className="recordItem" key={movement.id}>
+                  <strong>{movement.assetName ?? movement.type}</strong>
+                  <span>{movement.toHolder ?? "-"} | {new Date(movement.movedAt).toLocaleDateString("th-TH")}</span>
+                </div>
+              ))}
+            </div>
+          </PlaceholderPanel>
+        ) : null}
+        {activeMenu === "return" ? <PlaceholderPanel title="Return" description="รับคืนอุปกรณ์จากพนักงาน" /> : null}
+        {activeMenu === "audit" ? (
+          <PlaceholderPanel title="Audit Log" description="ตรวจสอบประวัติการใช้งานระบบ">
+            <div className="tableWrap">
+              <table>
+                <thead><tr><th>เวลา</th><th>Module</th><th>Action</th><th>Status</th></tr></thead>
+                <tbody>
+                  {data.auditLogs.map((log) => (
+                    <tr key={log.id}>
+                      <td>{new Date(log.createdAt).toLocaleString("th-TH")}</td>
+                      <td>{log.module}</td>
+                      <td>{log.action}</td>
+                      <td>{log.status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </PlaceholderPanel>
+        ) : null}
+        {activeMenu === "users" ? <UsersPage data={data} onRefresh={setData} /> : null}
+      </section>
+    </main>
+  );
+}
