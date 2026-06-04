@@ -179,20 +179,20 @@ const defaultDashboardFilters: DashboardFilters = {
 };
 
 const statusText: Record<AssetStatus, string> = {
-  IN_STOCK: "พร้อมใช้",
-  READY_TO_USE: "Ready to Use",
-  ASSIGNED: "Assigned",
-  IN_USE: "ใช้งานอยู่",
-  TRANSFERRED: "Transferred",
-  RETURNED: "Returned",
-  REPAIR: "ซ่อม",
-  WAITING_REPAIR: "Waiting Repair",
-  REPAIRING: "Repairing",
-  SPARE: "Spare",
+  IN_STOCK: "สต็อก",
+  READY_TO_USE: "พร้อมใช้",
+  ASSIGNED: "ส่งมอบแล้ว",
+  IN_USE: "ใช้งาน",
+  TRANSFERRED: "โอนย้าย",
+  RETURNED: "รับคืน",
+  REPAIR: "พัง",
+  WAITING_REPAIR: "รอซ่อม",
+  REPAIRING: "กำลังซ่อม",
+  SPARE: "เครื่องสำรอง",
   RETIRED: "เลิกใช้",
-  PENDING_DISPOSAL: "Pending Disposal",
-  DISPOSED: "Disposed",
-  LOST: "Lost"
+  PENDING_DISPOSAL: "รอจำหน่าย",
+  DISPOSED: "จำหน่าย",
+  LOST: "สูญหาย"
 };
 
 const typeText: Record<AssetType, string> = {
@@ -410,6 +410,7 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
   const [modules, setModules] = useState(initialModules);
   const [query, setQuery] = useState("");
   const [form, setForm] = useState<AssetForm>(emptyForm);
+  const [isAssetFormOpen, setIsAssetFormOpen] = useState(false);
   const [moduleForm, setModuleForm] = useState<ModuleForm>(emptyModuleForm);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -505,6 +506,7 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
         }
 
         setForm(emptyForm);
+        setIsAssetFormOpen(false);
         setMessage("เพิ่มรายการทรัพย์สินแล้ว");
         await refreshAssets();
       } catch (caught) {
@@ -1499,16 +1501,29 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
         {activeItem.slug !== "dashboard" && activeItem.slug !== "assets" ? renderOperationalModule(activeItem) : null}
 
         {activeItem.slug === "assets" ? (
-        <section className="layout">
-          <aside className="panel">
-          <div className="panelHeader">
-            <h2>เพิ่มทรัพย์สิน</h2>
-            <p>เว้น Asset Tag ว่างได้ ระบบจะสร้างรหัสตามประเภทและปีให้เอง</p>
+        <section className="assetStack">
+          <section className="panel">
+          <div className="panelHeader assetPanelHeader">
+            <div>
+              <h2>ทะเบียนทรัพย์สิน</h2>
+              <p>ค้นหา จัดการสถานะ และเพิ่มอุปกรณ์ IT ให้ข้อมูลพร้อมสำหรับรายงาน</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsAssetFormOpen((current) => !current)}
+              aria-expanded={isAssetFormOpen}
+            >
+              {isAssetFormOpen ? "ปิดฟอร์ม" : "เพิ่มทรัพย์สิน"}
+            </button>
           </div>
+          {message || error ? (
+            <div className="assetNoticeStack">
+              {message ? <p className="notice">{message}</p> : null}
+              {error ? <p className="notice error">{error}</p> : null}
+            </div>
+          ) : null}
+          {isAssetFormOpen ? (
           <form className="form" onSubmit={createAsset}>
-            {message ? <p className="notice">{message}</p> : null}
-            {error ? <p className="notice error">{error}</p> : null}
-
             <div className="formGrid">
               <label>
                 Asset Tag
@@ -1595,13 +1610,7 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
               {isPending ? "กำลังบันทึก" : "บันทึกทรัพย์สิน"}
             </button>
           </form>
-        </aside>
-
-        <section className="panel">
-          <div className="panelHeader">
-            <h2>ทะเบียนทรัพย์สิน</h2>
-            <p>ค้นหาและจัดการสถานะทรัพย์สิน IT</p>
-          </div>
+          ) : null}
           <div className="toolbar">
             <input
               aria-label="ค้นหาทรัพย์สิน"

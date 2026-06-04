@@ -2,19 +2,19 @@ import { prisma } from "@/lib/prisma";
 import { AssetStatus } from "@prisma/client";
 
 const statusText: Record<AssetStatus, string> = {
-  IN_STOCK: "พร้อมใช้",
-  READY_TO_USE: "Ready to Use",
-  ASSIGNED: "Assigned",
+  IN_STOCK: "สต็อก",
+  READY_TO_USE: "พร้อมใช้",
+  ASSIGNED: "ส่งมอบแล้ว",
   IN_USE: "ใช้งาน",
   TRANSFERRED: "โอนย้าย",
-  RETURNED: "รับคืนแล้ว",
-  REPAIR: "รอซ่อม",
-  WAITING_REPAIR: "รอส่งซ่อม",
-  REPAIRING: "อยู่ระหว่างซ่อม",
+  RETURNED: "รับคืน",
+  REPAIR: "พัง",
+  WAITING_REPAIR: "รอซ่อม",
+  REPAIRING: "กำลังซ่อม",
   SPARE: "เครื่องสำรอง",
   RETIRED: "เลิกใช้งาน",
   PENDING_DISPOSAL: "รอจำหน่าย",
-  DISPOSED: "จำหน่ายแล้ว",
+  DISPOSED: "จำหน่าย",
   LOST: "สูญหาย"
 };
 
