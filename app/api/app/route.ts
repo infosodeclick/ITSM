@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { AssetStatus } from "@prisma/client";
+import { AssetStatus, AssetType } from "@prisma/client";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -40,35 +40,41 @@ export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [assets, employees, budgets, auditLogs, users, roles, hrRequests, movements] = await Promise.all([
-    prisma.asset.findMany({
-      include: { branch: true, department: true },
-      orderBy: [{ updatedAt: "desc" }, { assetTag: "asc" }]
-    }),
-    prisma.employee.findMany({
-      include: { branch: true, department: true },
-      orderBy: [{ fullName: "asc" }]
-    }),
-    prisma.budget.findMany({ orderBy: [{ fiscalYear: "desc" }, { category: "asc" }] }),
-    prisma.auditLog.findMany({
-      include: { actorUser: true },
-      orderBy: [{ createdAt: "desc" }],
-      take: 80
-    }),
-    prisma.user.findMany({ include: { role: true }, orderBy: [{ createdAt: "desc" }], take: 100 }),
-    prisma.role.findMany({ orderBy: [{ name: "asc" }] }),
-    prisma.hrRequest.findMany({ orderBy: [{ createdAt: "desc" }], take: 60 }),
-    prisma.assetMovement.findMany({ orderBy: [{ movedAt: "desc" }], take: 60 })
-  ]);
+  const [assets, employees, budgets, auditLogs, users, roles, hrRequests, movements, branches, brands, categories] =
+    await Promise.all([
+      prisma.asset.findMany({
+        include: { branch: true, brand: true, category: true, department: true },
+        orderBy: [{ updatedAt: "desc" }, { assetTag: "asc" }]
+      }),
+      prisma.employee.findMany({
+        include: { branch: true, department: true },
+        orderBy: [{ fullName: "asc" }]
+      }),
+      prisma.budget.findMany({ orderBy: [{ fiscalYear: "desc" }, { category: "asc" }] }),
+      prisma.auditLog.findMany({
+        include: { actorUser: true },
+        orderBy: [{ createdAt: "desc" }],
+        take: 80
+      }),
+      prisma.user.findMany({ include: { role: true }, orderBy: [{ createdAt: "desc" }], take: 100 }),
+      prisma.role.findMany({ orderBy: [{ name: "asc" }] }),
+      prisma.hrRequest.findMany({ orderBy: [{ createdAt: "desc" }], take: 60 }),
+      prisma.assetMovement.findMany({ orderBy: [{ movedAt: "desc" }], take: 60 }),
+      prisma.branch.findMany({ orderBy: [{ name: "asc" }] }),
+      prisma.brand.findMany({ orderBy: [{ name: "asc" }] }),
+      prisma.assetCategory.findMany({ orderBy: [{ name: "asc" }] })
+    ]);
 
   const today = new Date();
   const expiredWarranty = assets.filter((asset) => asset.warrantyUntil && asset.warrantyUntil < today).length;
   const coveredWarranty = assets.filter((asset) => asset.warrantyUntil && asset.warrantyUntil >= today).length;
-  const statusCounts = Object.values(AssetStatus).map((status) => ({
-    status,
-    label: thaiStatus(status),
-    count: assets.filter((asset) => asset.status === status).length
-  })).filter((item) => item.count > 0);
+  const statusCounts = Object.values(AssetStatus)
+    .map((status) => ({
+      status,
+      label: thaiStatus(status),
+      count: assets.filter((asset) => asset.status === status).length
+    }))
+    .filter((item) => item.count > 0);
 
   const years = Array.from(
     new Set([...assets.map((asset) => purchaseYear(asset.purchaseDate)).filter(Boolean), ...budgets.map((budget) => budget.fiscalYear)])
@@ -125,6 +131,12 @@ export async function GET() {
       createdAt: item.createdAt
     })),
     roles,
+    masterData: {
+      branches,
+      brands,
+      categories,
+      assetTypes: Object.values(AssetType)
+    },
     hrRequests,
     movements
   });

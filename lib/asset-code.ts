@@ -3,6 +3,7 @@ import { AssetType, PrismaClient } from "@prisma/client";
 const assetTypePrefixes: Record<AssetType, string> = {
   NOTEBOOK: "NB",
   DESKTOP: "PC",
+  MINI_PC: "MINI",
   MONITOR: "MON",
   PRINTER: "PRN",
   SCANNER: "SCN",
@@ -30,10 +31,9 @@ export function getAssetCodePrefix(type: AssetType) {
   return assetTypePrefixes[type] ?? assetTypePrefixes.OTHER;
 }
 
-export async function generateAssetCode(prisma: PrismaClient, type: AssetType, date = new Date()) {
-  const year = date.getFullYear();
+export async function generateAssetCode(prisma: PrismaClient, type: AssetType) {
   const prefix = getAssetCodePrefix(type);
-  const codeStart = `${prefix}-${year}-`;
+  const codeStart = `${prefix}-`;
 
   const existingAssets = await prisma.asset.findMany({
     where: {
@@ -47,10 +47,10 @@ export async function generateAssetCode(prisma: PrismaClient, type: AssetType, d
   });
 
   const lastRunningNumber = existingAssets.reduce((max, asset) => {
-    const runningText = asset.assetTag.slice(codeStart.length);
+    const runningText = asset.assetTag.split("-").at(-1) ?? "";
     const runningNumber = Number.parseInt(runningText, 10);
     return Number.isNaN(runningNumber) ? max : Math.max(max, runningNumber);
   }, 0);
 
-  return `${codeStart}${String(lastRunningNumber + 1).padStart(4, "0")}`;
+  return `${codeStart}${String(lastRunningNumber + 1).padStart(3, "0")}`;
 }

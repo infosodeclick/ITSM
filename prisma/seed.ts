@@ -99,6 +99,7 @@ async function main() {
   const categories = [
     ["NOTEBOOK", "Notebook", "NB"],
     ["DESKTOP", "Desktop", "PC"],
+    ["MINI_PC", "Mini PC", "MINI"],
     ["MONITOR", "Monitor", "MON"],
     ["PRINTER", "Printer", "PRN"],
     ["NETWORK", "Network Device", "NET"],
@@ -123,6 +124,27 @@ async function main() {
     update: { name: "General Vendor" },
     create: { code: "GENERAL", name: "General Vendor" }
   });
+
+  const brands = [
+    ["LENOVO", "Lenovo"],
+    ["DELL", "Dell"],
+    ["HP", "HP"],
+    ["APPLE", "Apple"],
+    ["ASUS", "ASUS"],
+    ["ACER", "Acer"],
+    ["MICROSOFT", "Microsoft"],
+    ["OTHER", "Other"]
+  ] as const;
+
+  await Promise.all(
+    brands.map(([code, name]) =>
+      prisma.brand.upsert({
+        where: { code },
+        update: { name },
+        create: { code, name }
+      })
+    )
+  );
 
   await prisma.asset.upsert({
     where: { assetTag: "IT-0001" },

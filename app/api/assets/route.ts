@@ -28,8 +28,14 @@ export async function POST(request: Request) {
   }
 
   try {
+    const [brand, branch] = await Promise.all([
+      parsed.data.brandId ? prisma.brand.findUnique({ where: { id: parsed.data.brandId } }) : null,
+      parsed.data.branchId ? prisma.branch.findUnique({ where: { id: parsed.data.branchId } }) : null
+    ]);
     const data = {
       ...parsed.data,
+      manufacturer: brand?.name ?? parsed.data.manufacturer,
+      location: branch?.name ?? parsed.data.location,
       assetTag: parsed.data.assetTag ?? (await generateAssetCode(prisma, parsed.data.type))
     };
 

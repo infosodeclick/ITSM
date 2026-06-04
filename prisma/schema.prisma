@@ -27,6 +27,7 @@ enum AssetStatus {
 enum AssetType {
   NOTEBOOK
   DESKTOP
+  MINI_PC
   MONITOR
   PRINTER
   SCANNER
@@ -279,6 +280,16 @@ model Vendor {
   updatedAt   DateTime @updatedAt
 }
 
+model Brand {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String?
+  assets      Asset[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 model SoftwareLicense {
   id           String        @id @default(cuid())
   name         String
@@ -389,6 +400,7 @@ model Asset {
   departmentId      String?
   branchId          String?
   vendorId          String?
+  brandId           String?
   assetAcc          String?
   serialNumber      String?
   manufacturer      String?
@@ -417,6 +429,7 @@ model Asset {
   department        Department?    @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   branch            Branch?        @relation(fields: [branchId], references: [id], onDelete: SetNull)
   vendor            Vendor?        @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  brand             Brand?         @relation(fields: [brandId], references: [id], onDelete: SetNull)
   movements         AssetMovement[]
   maintenance       MaintenanceRecord[]
   createdBy         User?          @relation("AssetCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
@@ -432,6 +445,7 @@ model Asset {
   @@index([departmentId])
   @@index([branchId])
   @@index([vendorId])
+  @@index([brandId])
   @@index([createdById])
   @@index([updatedById])
 }

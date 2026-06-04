@@ -35,6 +35,7 @@ type Asset = {
   status: string;
   manufacturer: string | null;
   model: string | null;
+  type: string;
   purchaseDate: string | null;
   purchasePrice: string | number | null;
   warrantyUntil: string | null;
@@ -43,6 +44,8 @@ type Asset = {
   location: string | null;
   notes: string | null;
   branch?: { name: string } | null;
+  brand?: { name: string } | null;
+  category?: { name: string } | null;
   department?: { name: string } | null;
 };
 
@@ -70,11 +73,17 @@ type AppData = {
   auditLogs: Array<{ id: string; module: string; action: string; status: string; createdAt: string }>;
   users: Array<{ id: string; username: string | null; name: string; role: UserRole; isActive: boolean }>;
   roles: Array<{ id: string; name: UserRole; description: string | null }>;
+  masterData: {
+    branches: Array<{ id: string; code: string; name: string }>;
+    brands: Array<{ id: string; code: string; name: string }>;
+    categories: Array<{ id: string; code: string; name: string; prefix: string }>;
+    assetTypes: string[];
+  };
   hrRequests: Array<{ id: string; employeeName: string; department: string | null; status: string; createdAt: string }>;
   movements: Array<{ id: string; type: string; assetName: string | null; toHolder: string | null; movedAt: string }>;
 };
 
-type MenuKey = "dashboard" | "assets" | "newEmployee" | "transfer" | "return" | "audit" | "users";
+type MenuKey = "dashboard" | "assets" | "newEmployee" | "transfer" | "return" | "audit" | "masterData" | "users";
 
 const menuItems: Array<{ key: MenuKey; label: string; roles: UserRole[] }> = [
   { key: "dashboard", label: "แดชบอร์ด", roles: ["SUPER_ADMIN", "IT_ADMIN", "IT_STAFF", "HR"] },
@@ -83,6 +92,7 @@ const menuItems: Array<{ key: MenuKey; label: string; roles: UserRole[] }> = [
   { key: "transfer", label: "Assign / Transfer", roles: ["SUPER_ADMIN", "IT_ADMIN", "IT_STAFF"] },
   { key: "return", label: "Return", roles: ["SUPER_ADMIN", "IT_ADMIN", "IT_STAFF"] },
   { key: "audit", label: "Audit Log", roles: ["SUPER_ADMIN", "IT_ADMIN", "IT_STAFF", "HR"] },
+  { key: "masterData", label: "ข้อมูลหลัก", roles: ["SUPER_ADMIN", "IT_ADMIN", "IT_STAFF"] },
   { key: "users", label: "Users & Roles", roles: ["SUPER_ADMIN"] }
 ];
 
@@ -125,6 +135,28 @@ const assetStatusOptions = [
   ["DISPOSED", "จำหน่าย"],
   ["LOST", "สูญหาย"]
 ] as const;
+
+const assetTypeOptions = [
+  ["DESKTOP", "PC"],
+  ["NOTEBOOK", "Notebook"],
+  ["MINI_PC", "Mini PC"],
+  ["SERVER", "Server"],
+  ["MONITOR", "Monitor"],
+  ["PRINTER", "Printer"],
+  ["NETWORK", "Network"],
+  ["OTHER", "Other"]
+] as const;
+
+const assetTypePrefixes: Record<string, string> = {
+  DESKTOP: "PC",
+  NOTEBOOK: "NB",
+  MINI_PC: "MINI",
+  SERVER: "SRV",
+  MONITOR: "MON",
+  PRINTER: "PRN",
+  NETWORK: "NET",
+  OTHER: "OTH"
+};
 
 function statusLabel(status: string) {
   return assetStatusOptions.find(([value]) => value === status)?.[1] ?? status;
@@ -386,6 +418,20 @@ function PlaceholderPanel({ title, description, children }: { title: string; des
 function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppData) => void }) {
   const [showForm, setShowForm] = useState(false);
   const [message, setMessage] = useState("");
+  const [selectedType, setSelectedType] = useState("DESKTOP");
+
+  const nextAssetNo = useMemo(() => {
+    const prefix = assetTypePrefixes[selectedType] ?? "OTH";
+    const lastNumber = data.assets
+      .filter((asset) => asset.type === selectedType || asset.assetTag.startsWith(`${prefix}-`))
+      .reduce((max, asset) => {
+        const runningText = asset.assetTag.split("-").at(-1) ?? "";
+        const runningNumber = Number.parseInt(runningText, 10);
+        return Number.isNaN(runningNumber) ? max : Math.max(max, runningNumber);
+      }, 0);
+
+    return `${prefix}-${String(lastNumber + 1).padStart(3, "0")}`;
+  }, [data.assets, selectedType]);
 
   async function createAsset(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -395,14 +441,15 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        assetTag: form.get("assetTag") || undefined,
         name: form.get("name"),
+        type: selectedType,
+        categoryId: form.get("categoryId"),
+        branchId: form.get("branchId"),
+        brandId: form.get("brandId"),
         assetAcc: form.get("assetAcc"),
         serialNumber: form.get("serialNumber"),
-        location: form.get("location"),
         purchaseDate: form.get("purchaseDate"),
         status: form.get("status"),
-        manufacturer: form.get("manufacturer"),
         model: form.get("model"),
         notes: form.get("notes"),
         purchasePrice: form.get("purchasePrice")
@@ -434,18 +481,39 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
       </div>
       {showForm ? (
         <form className="assetCreateForm" onSubmit={createAsset}>
-          <label>Asset<input name="assetTag" placeholder="เว้นว่างเพื่อให้ระบบสร้างอัตโนมัติ" /></label>
-          <label>Asset Name<input name="name" required placeholder="เช่น Lenovo ThinkPad E14" /></label>
+          <label>ประเภท
+            <select value={selectedType} onChange={(event) => setSelectedType(event.target.value)}>
+              {assetTypeOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+          </label>
+          <label>NO<input value={nextAssetNo} readOnly aria-readonly="true" /></label>
+          <label>Asset<input name="name" required placeholder="เช่น Lenovo ThinkPad E14" /></label>
+          <label>ประเภทอุปกรณ์
+            <select name="categoryId" defaultValue="">
+              <option value="">เลือกประเภทอุปกรณ์</option>
+              {data.masterData.categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+            </select>
+          </label>
           <label>AssetAcc<input name="assetAcc" /></label>
           <label>S/N<input name="serialNumber" /></label>
-          <label>Location<input name="location" /></label>
+          <label>Location
+            <select name="branchId" defaultValue="">
+              <option value="">เลือก Location</option>
+              {data.masterData.branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
+            </select>
+          </label>
           <label>Years<input name="purchaseDate" type="date" /></label>
           <label>Status
             <select name="status" defaultValue="IN_STOCK">
               {assetStatusOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
           </label>
-          <label>Brand<input name="manufacturer" /></label>
+          <label>Brand
+            <select name="brandId" defaultValue="">
+              <option value="">เลือก Brand</option>
+              {data.masterData.brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}
+            </select>
+          </label>
           <label>Model<input name="model" /></label>
           <label>Notation<textarea name="notes" /></label>
           <label>Price<input name="purchasePrice" inputMode="decimal" /></label>
@@ -462,7 +530,7 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
           <thead>
             <tr>
               <th>No.</th>
-              <th>Asset</th>
+              <th>NO</th>
               <th>AssetAcc</th>
               <th>S/N</th>
               <th>User</th>
@@ -488,7 +556,7 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
                 <td>{asset.branch?.name ?? asset.location ?? "-"}</td>
                 <td>{purchaseYear(asset.purchaseDate) || "-"}</td>
                 <td><span className="badge">{statusLabel(asset.status)}</span></td>
-                <td>{asset.manufacturer ?? "-"}</td>
+                <td>{asset.brand?.name ?? asset.manufacturer ?? "-"}</td>
                 <td>{asset.model ?? "-"}</td>
                 <td>{asset.notes ?? "-"}</td>
                 <td>{formatMoney(asset.purchasePrice)}</td>
@@ -500,6 +568,98 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
       ) : showForm ? (
         <p className="empty">ยังไม่มีรายการ Asset หลังบันทึกข้อมูลแรก ตารางจะแสดงที่นี่</p>
       ) : null}
+    </section>
+  );
+}
+
+function MasterDataPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppData) => void }) {
+  const [message, setMessage] = useState("");
+
+  async function submitMasterData(event: FormEvent<HTMLFormElement>, kind: "location" | "brand" | "category") {
+    event.preventDefault();
+    setMessage("");
+    const form = new FormData(event.currentTarget);
+    const response = await fetch("/api/master-data", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kind,
+        code: form.get("code"),
+        name: form.get("name"),
+        prefix: form.get("prefix"),
+        description: form.get("description")
+      })
+    });
+
+    if (!response.ok) {
+      setMessage("บันทึกข้อมูลหลักไม่สำเร็จ กรุณาตรวจรหัสซ้ำหรือข้อมูลที่กรอก");
+      return;
+    }
+
+    const appResponse = await fetch("/api/app");
+    onRefresh(await appResponse.json());
+    event.currentTarget.reset();
+    setMessage("บันทึกข้อมูลหลักสำเร็จ");
+  }
+
+  return (
+    <section className="dashboardPage">
+      <div className="dashboardHero">
+        <div>
+          <p className="eyebrow">Master Data</p>
+          <h1>ข้อมูลหลักสำหรับ dropdown</h1>
+          <p>เพิ่ม Location, ประเภทอุปกรณ์ และ Brand เพื่อใช้ตอนเพิ่มอุปกรณ์ ลดการพิมพ์ผิด</p>
+        </div>
+      </div>
+      {message ? <p className="notice">{message}</p> : null}
+      <div className="masterDataGrid">
+        <form className="panel form" onSubmit={(event) => submitMasterData(event, "location")}>
+          <div className="panelHeader">
+            <h2>Location</h2>
+            <p>สาขา / จุดติดตั้ง / สถานที่เก็บอุปกรณ์</p>
+          </div>
+          <label>Code<input name="code" required placeholder="HQ" /></label>
+          <label>Name<input name="name" required placeholder="Head Office" /></label>
+          <label>Description<textarea name="description" /></label>
+          <button type="submit">บันทึก Location</button>
+        </form>
+
+        <form className="panel form" onSubmit={(event) => submitMasterData(event, "category")}>
+          <div className="panelHeader">
+            <h2>ประเภทอุปกรณ์</h2>
+            <p>หมวดหมู่สำหรับแยกอุปกรณ์และรายงาน</p>
+          </div>
+          <label>Code<input name="code" required placeholder="NOTEBOOK" /></label>
+          <label>Name<input name="name" required placeholder="Notebook" /></label>
+          <label>Prefix<input name="prefix" required placeholder="NB" /></label>
+          <label>Description<textarea name="description" /></label>
+          <button type="submit">บันทึกประเภท</button>
+        </form>
+
+        <form className="panel form" onSubmit={(event) => submitMasterData(event, "brand")}>
+          <div className="panelHeader">
+            <h2>Brand</h2>
+            <p>ยี่ห้ออุปกรณ์ที่ใช้ใน dropdown</p>
+          </div>
+          <label>Code<input name="code" required placeholder="LENOVO" /></label>
+          <label>Name<input name="name" required placeholder="Lenovo" /></label>
+          <label>Description<textarea name="description" /></label>
+          <button type="submit">บันทึก Brand</button>
+        </form>
+      </div>
+
+      <div className="dashboardChartsTop">
+        <PlaceholderPanel title="Location ที่มีในระบบ" description="ใช้ใน dropdown ตอนเพิ่มอุปกรณ์">
+          <div className="recordList">
+            {data.masterData.branches.map((item) => <div className="recordItem" key={item.id}><strong>{item.name}</strong><span>{item.code}</span></div>)}
+          </div>
+        </PlaceholderPanel>
+        <PlaceholderPanel title="Brand ที่มีในระบบ" description="ใช้ใน dropdown ตอนเพิ่มอุปกรณ์">
+          <div className="recordList">
+            {data.masterData.brands.map((item) => <div className="recordItem" key={item.id}><strong>{item.name}</strong><span>{item.code}</span></div>)}
+          </div>
+        </PlaceholderPanel>
+      </div>
     </section>
   );
 }
@@ -669,6 +829,7 @@ export default function ItsmConsole() {
             </div>
           </PlaceholderPanel>
         ) : null}
+        {activeMenu === "masterData" ? <MasterDataPage data={data} onRefresh={setData} /> : null}
         {activeMenu === "users" ? <UsersPage data={data} onRefresh={setData} /> : null}
       </section>
     </main>

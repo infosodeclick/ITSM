@@ -692,6 +692,13 @@ h1 {
   align-items: start;
 }
 
+.masterDataGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(240px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
 .panel {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -1022,6 +1029,10 @@ th {
   .dashboardTopGrid,
   .dashboardChartsTop,
   .moduleGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .masterDataGrid {
     grid-template-columns: 1fr;
   }
 

@@ -202,6 +202,7 @@ const statusText: Record<AssetStatus, string> = {
 const typeText: Record<AssetType, string> = {
   NOTEBOOK: "Notebook",
   DESKTOP: "Desktop",
+  MINI_PC: "Mini PC",
   MONITOR: "Monitor",
   PRINTER: "Printer",
   SCANNER: "Scanner",
