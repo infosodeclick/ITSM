@@ -433,27 +433,14 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
   const [showForm, setShowForm] = useState(false);
   const [message, setMessage] = useState("");
   const [selectedType, setSelectedType] = useState("DESKTOP");
-  const [selectedBrand, setSelectedBrand] = useState("all");
   const selectedTypeMaster = data.masterData.assetTypes.find((type) => type.code === selectedType);
   const visibleAssetTypes = data.masterData.assetTypes.length
     ? data.masterData.assetTypes
     : assetTypeOptions.map(([code, name]) => ({ id: code, code, name, prefix: assetTypePrefixes[code] ?? code, typeBrands: [] }));
 
-  const assetsBySelectedType = useMemo(
-    () => data.assets.filter((asset) => asset.type === selectedType),
-    [data.assets, selectedType]
-  );
-
   const brandOptionsForType = useMemo(() => {
     return selectedTypeMaster?.typeBrands.map((item) => item.brand).sort((a, b) => a.name.localeCompare(b.name)) ?? [];
   }, [selectedTypeMaster]);
-
-  const filteredAssets = useMemo(() => {
-    return assetsBySelectedType.filter((asset) => {
-      const brandName = asset.brand?.name ?? asset.manufacturer ?? "";
-      return selectedBrand === "all" || brandName === selectedBrand;
-    });
-  }, [assetsBySelectedType, selectedBrand]);
 
   const nextAssetNo = useMemo(() => {
     const prefix = selectedTypeMaster?.prefix ?? assetTypePrefixes[selectedType] ?? "OTH";
@@ -516,7 +503,7 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
       {showForm ? (
         <form className="assetCreateForm" onSubmit={createAsset}>
           <label>ประเภท
-            <select value={selectedType} onChange={(event) => { setSelectedType(event.target.value); setSelectedBrand("all"); }}>
+            <select value={selectedType} onChange={(event) => setSelectedType(event.target.value)}>
               {visibleAssetTypes.map((type) => <option key={type.id} value={type.code}>{type.name}</option>)}
             </select>
           </label>
@@ -552,24 +539,7 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
         </form>
       ) : null}
       {message ? <p className="notice assetInlineNotice">{message}</p> : null}
-      <div className="assetFilterBar">
-        <label>ประเภท
-          <select value={selectedType} onChange={(event) => { setSelectedType(event.target.value); setSelectedBrand("all"); }}>
-            {visibleAssetTypes.map((type) => <option key={type.id} value={type.code}>{type.name}</option>)}
-          </select>
-        </label>
-        <label>Brand
-          <select value={selectedBrand} onChange={(event) => setSelectedBrand(event.target.value)} disabled={brandOptionsForType.length === 0}>
-            <option value="all">ทั้งหมดใน {selectedTypeMaster?.name ?? fallbackTypeName(selectedType)}</option>
-            {brandOptionsForType.map((brand) => <option key={brand.id} value={brand.name}>{brand.name}</option>)}
-          </select>
-        </label>
-        <div className="assetFilterSummary">
-          <span>{selectedTypeMaster?.name ?? fallbackTypeName(selectedType)}</span>
-          <strong>{filteredAssets.length} รายการ</strong>
-        </div>
-      </div>
-      {filteredAssets.length > 0 ? (
+      {data.assets.length > 0 ? (
       <div className="tableWrap">
         <table className="assetReportTable">
           <thead>
@@ -590,7 +560,7 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
             </tr>
           </thead>
           <tbody>
-            {filteredAssets.map((asset, index) => (
+            {data.assets.map((asset, index) => (
               <tr key={asset.id}>
                 <td>{index + 1}</td>
                 <td><strong>{asset.assetTag}</strong><br /><span className="small">{asset.name}</span></td>
@@ -610,9 +580,9 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
           </tbody>
         </table>
       </div>
-      ) : (
-        <p className="empty">ยังไม่มีรายการ {selectedTypeMaster?.name ?? fallbackTypeName(selectedType)}{selectedBrand === "all" ? "" : ` ของ ${selectedBrand}`}</p>
-      )}
+      ) : showForm ? (
+        <p className="empty">ยังไม่มีรายการ Asset หลังบันทึกข้อมูลแรก ตารางจะแสดงที่นี่</p>
+      ) : null}
     </section>
   );
 }
