@@ -239,19 +239,19 @@ h1 {
 .dashboardGrid {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
-  gap: 18px;
+  gap: 14px;
   align-items: start;
 }
 
 .dashboardGrid .panel,
 .dashboardCharts .panel,
-.dashboardBudgetGrid .panel {
+.dashboardTopGrid .panel {
   box-shadow: 0 10px 26px rgba(16, 24, 40, 0.06);
 }
 
 .dashboardStack {
   display: grid;
-  gap: 18px;
+  gap: 14px;
 }
 
 .assetStack {
@@ -279,21 +279,25 @@ h1 {
 
 .dashboardCharts {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 14px;
 }
 
-.dashboardBudgetGrid {
+.dashboardTopGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
-  gap: 18px;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+  gap: 14px;
   align-items: start;
 }
 
 .budgetHero {
   background:
-    linear-gradient(135deg, rgba(11, 107, 91, 0.08), rgba(23, 64, 111, 0.04)),
+    linear-gradient(135deg, rgba(11, 107, 91, 0.1), rgba(23, 64, 111, 0.05)),
     var(--panel);
+}
+
+.chartHighlight {
+  min-height: 100%;
 }
 
 .budgetMetrics {
@@ -343,10 +347,11 @@ h1 {
 
 .filterGrid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(140px, 1fr)) auto;
-  gap: 12px;
+  grid-template-columns: repeat(5, minmax(132px, 1fr)) auto;
+  gap: 10px;
   align-items: end;
-  padding: 16px;
+  padding: 12px;
+  background: #fbfcff;
 }
 
 .filterReset {
@@ -678,7 +683,7 @@ th {
   .layout,
   .dashboardGrid,
   .dashboardCharts,
-  .dashboardBudgetGrid,
+  .dashboardTopGrid,
   .moduleGrid {
     grid-template-columns: 1fr;
   }
