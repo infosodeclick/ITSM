@@ -443,7 +443,6 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
       body: JSON.stringify({
         name: form.get("name"),
         type: selectedType,
-        categoryId: form.get("categoryId"),
         branchId: form.get("branchId"),
         brandId: form.get("brandId"),
         assetAcc: form.get("assetAcc"),
@@ -488,12 +487,6 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
           </label>
           <label>NO<input value={nextAssetNo} readOnly aria-readonly="true" /></label>
           <label>Asset<input name="name" required placeholder="เช่น Lenovo ThinkPad E14" /></label>
-          <label>ประเภทอุปกรณ์
-            <select name="categoryId" defaultValue="">
-              <option value="">เลือกประเภทอุปกรณ์</option>
-              {data.masterData.categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
-            </select>
-          </label>
           <label>AssetAcc<input name="assetAcc" /></label>
           <label>S/N<input name="serialNumber" /></label>
           <label>Location
