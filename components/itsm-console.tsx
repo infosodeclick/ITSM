@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
@@ -30,6 +30,8 @@ type Asset = {
   id: string;
   assetTag: string;
   name: string;
+  assetAcc: string | null;
+  serialNumber: string | null;
   status: string;
   manufacturer: string | null;
   model: string | null;
@@ -37,7 +39,9 @@ type Asset = {
   purchasePrice: string | number | null;
   warrantyUntil: string | null;
   assignedTo: string | null;
+  userPosition: string | null;
   location: string | null;
+  notes: string | null;
   branch?: { name: string } | null;
   department?: { name: string } | null;
 };
@@ -73,7 +77,7 @@ type AppData = {
 type MenuKey = "dashboard" | "assets" | "newEmployee" | "transfer" | "return" | "audit" | "users";
 
 const menuItems: Array<{ key: MenuKey; label: string; roles: UserRole[] }> = [
-  { key: "dashboard", label: "แดชบอร์ด", roles: ["SUPER_ADMIN", "IT_ADMIN", "IT_STAFF", "HR"] },
+  { key: "dashboard", label: "à¹à¸”à¸Šà¸šà¸­à¸£à¹Œà¸”", roles: ["SUPER_ADMIN", "IT_ADMIN", "IT_STAFF", "HR"] },
   { key: "assets", label: "Assets", roles: ["SUPER_ADMIN", "IT_ADMIN", "IT_STAFF"] },
   { key: "newEmployee", label: "New Employee Request", roles: ["SUPER_ADMIN", "IT_ADMIN", "IT_STAFF", "HR"] },
   { key: "transfer", label: "Assign / Transfer", roles: ["SUPER_ADMIN", "IT_ADMIN", "IT_STAFF"] },
@@ -108,6 +112,24 @@ function roleLabel(role?: UserRole) {
   return role ? labels[role] ?? role : "-";
 }
 
+const assetStatusOptions = [
+  ["IN_STOCK", "à¸ªà¸•à¹‡à¸­à¸"],
+  ["READY_TO_USE", "à¸žà¸£à¹‰à¸­à¸¡à¹ƒà¸Šà¹‰"],
+  ["IN_USE", "à¹ƒà¸Šà¹‰à¸‡à¸²à¸™à¸­à¸¢à¸¹à¹ˆ"],
+  ["REPAIR", "à¸žà¸±à¸‡"],
+  ["WAITING_REPAIR", "à¸£à¸­à¸‹à¹ˆà¸­à¸¡"],
+  ["REPAIRING", "à¸à¸³à¸¥à¸±à¸‡à¸‹à¹ˆà¸­à¸¡"],
+  ["SPARE", "à¹€à¸„à¸£à¸·à¹ˆà¸­à¸‡à¸ªà¸³à¸£à¸­à¸‡"],
+  ["RETIRED", "à¹€à¸¥à¸´à¸à¹ƒà¸Šà¹‰à¸‡à¸²à¸™"],
+  ["PENDING_DISPOSAL", "à¸£à¸­à¸ˆà¸³à¸«à¸™à¹ˆà¸²à¸¢"],
+  ["DISPOSED", "à¸ˆà¸³à¸«à¸™à¹ˆà¸²à¸¢"],
+  ["LOST", "à¸ªà¸¹à¸à¸«à¸²à¸¢"]
+] as const;
+
+function statusLabel(status: string) {
+  return assetStatusOptions.find(([value]) => value === status)?.[1] ?? status;
+}
+
 function LoginPanel({ onLogin }: { onLogin: (data: AppData) => void }) {
   const [username, setUsername] = useState("administrator");
   const [password, setPassword] = useState("");
@@ -127,14 +149,14 @@ function LoginPanel({ onLogin }: { onLogin: (data: AppData) => void }) {
 
     if (!response.ok) {
       const body = await response.json().catch(() => null);
-      setError(body?.error ?? "เข้าสู่ระบบไม่สำเร็จ");
+      setError(body?.error ?? "à¹€à¸‚à¹‰à¸²à¸ªà¸¹à¹ˆà¸£à¸°à¸šà¸šà¹„à¸¡à¹ˆà¸ªà¸³à¹€à¸£à¹‡à¸ˆ");
       setLoading(false);
       return;
     }
 
     const appResponse = await fetch("/api/app");
     if (!appResponse.ok) {
-      setError("เข้าสู่ระบบแล้ว แต่โหลดข้อมูลระบบไม่สำเร็จ");
+      setError("à¹€à¸‚à¹‰à¸²à¸ªà¸¹à¹ˆà¸£à¸°à¸šà¸šà¹à¸¥à¹‰à¸§ à¹à¸•à¹ˆà¹‚à¸«à¸¥à¸”à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸£à¸°à¸šà¸šà¹„à¸¡à¹ˆà¸ªà¸³à¹€à¸£à¹‡à¸ˆ");
       setLoading(false);
       return;
     }
@@ -148,16 +170,16 @@ function LoginPanel({ onLogin }: { onLogin: (data: AppData) => void }) {
       <section className="loginVisual" aria-label="IT Service Management">
         <div className="loginBrand">
           <span>IT Service Management</span>
-          <h1>จัดการงาน IT และทรัพย์สินในที่เดียว</h1>
-          <p>Dashboard, Assets, HR Request, Transfer, Return, Audit Log และ Users & Roles พร้อมต่อยอดทีละระบบ</p>
+          <h1>à¸ˆà¸±à¸”à¸à¸²à¸£à¸‡à¸²à¸™ IT à¹à¸¥à¸°à¸—à¸£à¸±à¸žà¸¢à¹Œà¸ªà¸´à¸™à¹ƒà¸™à¸—à¸µà¹ˆà¹€à¸”à¸µà¸¢à¸§</h1>
+          <p>Dashboard, Assets, HR Request, Transfer, Return, Audit Log à¹à¸¥à¸° Users & Roles à¸žà¸£à¹‰à¸­à¸¡à¸•à¹ˆà¸­à¸¢à¸­à¸”à¸—à¸µà¸¥à¸°à¸£à¸°à¸šà¸š</p>
         </div>
       </section>
       <section className="loginPanel" aria-label="Login form">
         <form className="loginCard" onSubmit={submit}>
           <div>
             <p className="eyebrow">Secure Access</p>
-            <h2>เข้าสู่ระบบ</h2>
-            <p>ใช้บัญชีที่ได้รับสิทธิ์เพื่อเข้าใช้งานระบบ ITSM</p>
+            <h2>à¹€à¸‚à¹‰à¸²à¸ªà¸¹à¹ˆà¸£à¸°à¸šà¸š</h2>
+            <p>à¹ƒà¸Šà¹‰à¸šà¸±à¸à¸Šà¸µà¸—à¸µà¹ˆà¹„à¸”à¹‰à¸£à¸±à¸šà¸ªà¸´à¸—à¸˜à¸´à¹Œà¹€à¸žà¸·à¹ˆà¸­à¹€à¸‚à¹‰à¸²à¹ƒà¸Šà¹‰à¸‡à¸²à¸™à¸£à¸°à¸šà¸š ITSM</p>
           </div>
           <label>
             Username
@@ -173,7 +195,7 @@ function LoginPanel({ onLogin }: { onLogin: (data: AppData) => void }) {
             />
           </label>
           {error ? <p className="notice error">{error}</p> : null}
-          <button type="submit" disabled={loading}>{loading ? "กำลังตรวจสอบ..." : "Login"}</button>
+          <button type="submit" disabled={loading}>{loading ? "à¸à¸³à¸¥à¸±à¸‡à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸š..." : "Login"}</button>
         </form>
       </section>
     </main>
@@ -210,8 +232,8 @@ function Dashboard({ data }: { data: AppData }) {
       <div className="dashboardHero">
         <div>
           <p className="eyebrow">Dashboard</p>
-          <h1>ภาพรวม IT Service Management</h1>
-          <p>ดูจำนวนพนักงาน อุปกรณ์ Warranty สถานะเครื่อง และงบประมาณแยกตามปี</p>
+          <h1>à¸ à¸²à¸žà¸£à¸§à¸¡ IT Service Management</h1>
+          <p>à¸”à¸¹à¸ˆà¸³à¸™à¸§à¸™à¸žà¸™à¸±à¸à¸‡à¸²à¸™ à¸­à¸¸à¸›à¸à¸£à¸“à¹Œ Warranty à¸ªà¸–à¸²à¸™à¸°à¹€à¸„à¸£à¸·à¹ˆà¸­à¸‡ à¹à¸¥à¸°à¸‡à¸šà¸›à¸£à¸°à¸¡à¸²à¸“à¹à¸¢à¸à¸•à¸²à¸¡à¸›à¸µ</p>
         </div>
         <div className="userPill">
           <span>{data.user.name}</span>
@@ -220,37 +242,37 @@ function Dashboard({ data }: { data: AppData }) {
       </div>
 
       <div className="statStrip">
-        <div><span>พนักงาน</span><strong>{data.dashboard.employeeCount}</strong></div>
-        <div><span>อุปกรณ์ IT</span><strong>{data.dashboard.assetCount}</strong></div>
-        <div><span>หมดประกัน</span><strong>{data.dashboard.expiredWarranty}</strong></div>
-        <div><span>เหลือประกัน</span><strong>{data.dashboard.coveredWarranty}</strong></div>
+        <div><span>à¸žà¸™à¸±à¸à¸‡à¸²à¸™</span><strong>{data.dashboard.employeeCount}</strong></div>
+        <div><span>à¸­à¸¸à¸›à¸à¸£à¸“à¹Œ IT</span><strong>{data.dashboard.assetCount}</strong></div>
+        <div><span>à¸«à¸¡à¸”à¸›à¸£à¸°à¸à¸±à¸™</span><strong>{data.dashboard.expiredWarranty}</strong></div>
+        <div><span>à¹€à¸«à¸¥à¸·à¸­à¸›à¸£à¸°à¸à¸±à¸™</span><strong>{data.dashboard.coveredWarranty}</strong></div>
       </div>
 
       <div className="dashboardChartsTop">
         <section className="panel">
           <div className="panelHeader">
-            <h2>งบประมาณทรัพย์สิน IT แยกตามปี</h2>
-            <p>ยอด actual spending จากตาราง Budget</p>
+            <h2>à¸‡à¸šà¸›à¸£à¸°à¸¡à¸²à¸“à¸—à¸£à¸±à¸žà¸¢à¹Œà¸ªà¸´à¸™ IT à¹à¸¢à¸à¸•à¸²à¸¡à¸›à¸µ</h2>
+            <p>à¸¢à¸­à¸” actual spending à¸ˆà¸²à¸à¸•à¸²à¸£à¸²à¸‡ Budget</p>
           </div>
           <div className="chartRows">
             {budgetByYear.length ? budgetByYear.map((item) => (
               <div className="chartRow" key={item.year}>
-                <div className="barLabel"><strong>{item.year}</strong><span>{formatMoney(item.budget)} บาท</span></div>
+                <div className="barLabel"><strong>{item.year}</strong><span>{formatMoney(item.budget)} à¸šà¸²à¸—</span></div>
                 <div className="barTrack"><span className="barFill canvaFill" style={{ width: `${Math.max(6, (item.budget / maxBudget) * 100)}%` }} /></div>
               </div>
-            )) : <p className="empty">ยังไม่มีข้อมูลงบประมาณ</p>}
+            )) : <p className="empty">à¸¢à¸±à¸‡à¹„à¸¡à¹ˆà¸¡à¸µà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸‡à¸šà¸›à¸£à¸°à¸¡à¸²à¸“</p>}
           </div>
         </section>
 
         <section className="panel">
           <div className="panelHeader">
-            <h2>สถานะเครื่อง</h2>
-            <p>สัดส่วนสถานะอุปกรณ์ในระบบ</p>
+            <h2>à¸ªà¸–à¸²à¸™à¸°à¹€à¸„à¸£à¸·à¹ˆà¸­à¸‡</h2>
+            <p>à¸ªà¸±à¸”à¸ªà¹ˆà¸§à¸™à¸ªà¸–à¸²à¸™à¸°à¸­à¸¸à¸›à¸à¸£à¸“à¹Œà¹ƒà¸™à¸£à¸°à¸šà¸š</p>
           </div>
           <div className="donutWrap">
             <div className="donut">
               <strong>{data.dashboard.assetCount}</strong>
-              <span>เครื่อง</span>
+              <span>à¹€à¸„à¸£à¸·à¹ˆà¸­à¸‡</span>
             </div>
             <div className="legendList">
               {data.dashboard.statusCounts.length ? data.dashboard.statusCounts.map((item) => (
@@ -258,7 +280,7 @@ function Dashboard({ data }: { data: AppData }) {
                   <span>{item.label}</span>
                   <strong>{item.count} ({Math.round((item.count / statusTotal) * 100)}%)</strong>
                 </div>
-              )) : <p className="empty">ยังไม่มีสถานะเครื่อง</p>}
+              )) : <p className="empty">à¸¢à¸±à¸‡à¹„à¸¡à¹ˆà¸¡à¸µà¸ªà¸–à¸²à¸™à¸°à¹€à¸„à¸£à¸·à¹ˆà¸­à¸‡</p>}
             </div>
           </div>
         </section>
@@ -267,48 +289,48 @@ function Dashboard({ data }: { data: AppData }) {
       <section className="panel">
         <div className="panelHeader">
           <h2>Dashboard Filters</h2>
-          <p>กรองข้อมูลตามปีซื้อ แผนก สาขา และสถานะ</p>
+          <p>à¸à¸£à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸•à¸²à¸¡à¸›à¸µà¸‹à¸·à¹‰à¸­ à¹à¸œà¸™à¸ à¸ªà¸²à¸‚à¸² à¹à¸¥à¸°à¸ªà¸–à¸²à¸™à¸°</p>
         </div>
         <div className="filterGrid">
-          <label>ปีซื้อ
+          <label>à¸›à¸µà¸‹à¸·à¹‰à¸­
             <select value={year} onChange={(event) => setYear(event.target.value)}>
-              <option value="all">ทั้งหมด</option>
+              <option value="all">à¸—à¸±à¹‰à¸‡à¸«à¸¡à¸”</option>
               {data.filters.years.map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
           </label>
-          <label>แผนก
+          <label>à¹à¸œà¸™à¸
             <select value={department} onChange={(event) => setDepartment(event.target.value)}>
-              <option value="all">ทั้งหมด</option>
+              <option value="all">à¸—à¸±à¹‰à¸‡à¸«à¸¡à¸”</option>
               {data.filters.departments.map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
           </label>
-          <label>สาขา
+          <label>à¸ªà¸²à¸‚à¸²
             <select value={branch} onChange={(event) => setBranch(event.target.value)}>
-              <option value="all">ทั้งหมด</option>
+              <option value="all">à¸—à¸±à¹‰à¸‡à¸«à¸¡à¸”</option>
               {data.filters.branches.map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
           </label>
-          <label>สถานะ
+          <label>à¸ªà¸–à¸²à¸™à¸°
             <select value={status} onChange={(event) => setStatus(event.target.value)}>
-              <option value="all">ทั้งหมด</option>
+              <option value="all">à¸—à¸±à¹‰à¸‡à¸«à¸¡à¸”</option>
               {data.filters.statuses.map((item) => <option key={item.status} value={item.status}>{item.label}</option>)}
             </select>
           </label>
-          <button className="secondary" onClick={() => { setYear("all"); setDepartment("all"); setBranch("all"); setStatus("all"); }}>ล้าง Filter</button>
+          <button className="secondary" onClick={() => { setYear("all"); setDepartment("all"); setBranch("all"); setStatus("all"); }}>à¸¥à¹‰à¸²à¸‡ Filter</button>
         </div>
       </section>
 
       <section className="panel">
         <div className="panelHeader">
-          <h2>จำนวนเครื่องตามปีที่ซื้อ</h2>
-          <p>แยกเครื่องใช้งาน พัง และว่าง/สต็อก</p>
+          <h2>à¸ˆà¸³à¸™à¸§à¸™à¹€à¸„à¸£à¸·à¹ˆà¸­à¸‡à¸•à¸²à¸¡à¸›à¸µà¸—à¸µà¹ˆà¸‹à¸·à¹‰à¸­</h2>
+          <p>à¹à¸¢à¸à¹€à¸„à¸£à¸·à¹ˆà¸­à¸‡à¹ƒà¸Šà¹‰à¸‡à¸²à¸™ à¸žà¸±à¸‡ à¹à¸¥à¸°à¸§à¹ˆà¸²à¸‡/à¸ªà¸•à¹‡à¸­à¸</p>
         </div>
         <div className="chartRows">
           {budgetByYear.length ? budgetByYear.map((item) => (
             <div className="yearBlock" key={item.year}>
               <div className="barLabel">
                 <strong>{item.year}</strong>
-                <span>{item.total} เครื่อง | ใช้ {item.inUse} | พัง {item.damaged} | ว่าง {item.spare}</span>
+                <span>{item.total} à¹€à¸„à¸£à¸·à¹ˆà¸­à¸‡ | à¹ƒà¸Šà¹‰ {item.inUse} | à¸žà¸±à¸‡ {item.damaged} | à¸§à¹ˆà¸²à¸‡ {item.spare}</span>
               </div>
               <div className="stackBar">
                 <span className="stackUse" style={{ width: `${Math.max(0, (item.inUse / maxAssets) * 100)}%` }} />
@@ -316,14 +338,14 @@ function Dashboard({ data }: { data: AppData }) {
                 <span className="stackFree" style={{ width: `${Math.max(0, (item.spare / maxAssets) * 100)}%` }} />
               </div>
             </div>
-          )) : <p className="empty">ยังไม่มีข้อมูลตามปีซื้อ</p>}
+          )) : <p className="empty">à¸¢à¸±à¸‡à¹„à¸¡à¹ˆà¸¡à¸µà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸•à¸²à¸¡à¸›à¸µà¸‹à¸·à¹‰à¸­</p>}
         </div>
       </section>
 
       <section className="panel">
         <div className="panelHeader">
-          <h2>รายการตาม Filter</h2>
-          <p>พบ {filteredAssets.length} รายการ</p>
+          <h2>à¸£à¸²à¸¢à¸à¸²à¸£à¸•à¸²à¸¡ Filter</h2>
+          <p>à¸žà¸š {filteredAssets.length} à¸£à¸²à¸¢à¸à¸²à¸£</p>
         </div>
         <div className="tableWrap">
           <table>
@@ -356,34 +378,131 @@ function PlaceholderPanel({ title, description, children }: { title: string; des
         <h2>{title}</h2>
         <p>{description}</p>
       </div>
-      <div className="moduleBody">{children ?? <p className="moduleNote">หน้ารายละเอียดจะทำต่อเป็น feature แยก เพื่อไม่ให้กระทบระบบหลัก</p>}</div>
+      <div className="moduleBody">{children ?? <p className="moduleNote">à¸«à¸™à¹‰à¸²à¸£à¸²à¸¢à¸¥à¸°à¹€à¸­à¸µà¸¢à¸”à¸ˆà¸°à¸—à¸³à¸•à¹ˆà¸­à¹€à¸›à¹‡à¸™ feature à¹à¸¢à¸ à¹€à¸žà¸·à¹ˆà¸­à¹„à¸¡à¹ˆà¹ƒà¸«à¹‰à¸à¸£à¸°à¸—à¸šà¸£à¸°à¸šà¸šà¸«à¸¥à¸±à¸</p>}</div>
     </section>
   );
 }
 
-function AssetsPage({ data }: { data: AppData }) {
+function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppData) => void }) {
+  const [showForm, setShowForm] = useState(false);
+  const [message, setMessage] = useState("");
+
+  async function createAsset(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage("");
+    const form = new FormData(event.currentTarget);
+    const response = await fetch("/api/assets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        assetTag: form.get("assetTag") || undefined,
+        name: form.get("name"),
+        assetAcc: form.get("assetAcc"),
+        serialNumber: form.get("serialNumber"),
+        assignedTo: form.get("assignedTo"),
+        userPosition: form.get("userPosition"),
+        location: form.get("location"),
+        purchaseDate: form.get("purchaseDate"),
+        status: form.get("status"),
+        manufacturer: form.get("manufacturer"),
+        model: form.get("model"),
+        notes: form.get("notes"),
+        purchasePrice: form.get("purchasePrice")
+      })
+    });
+
+    if (!response.ok) {
+      setMessage("เพิ่ม Asset ไม่สำเร็จ กรุณาตรวจข้อมูลอีกครั้ง");
+      return;
+    }
+
+    const appResponse = await fetch("/api/app");
+    onRefresh(await appResponse.json());
+    setMessage("เพิ่ม Asset สำเร็จ");
+    event.currentTarget.reset();
+    setShowForm(false);
+  }
+
   return (
-    <PlaceholderPanel title="Assets" description="รายการทรัพย์สิน IT เบื้องต้น">
+    <section className="panel">
+      <div className="panelHeader assetListHeader">
+        <div>
+          <h2>Assets</h2>
+          <p>รายการทรัพย์สิน IT ตามรูปแบบรายงานหลัก</p>
+        </div>
+        <button type="button" onClick={() => setShowForm((value) => !value)}>
+          {showForm ? "ปิดฟอร์ม" : "เพิ่ม Assets"}
+        </button>
+      </div>
+      {showForm ? (
+        <form className="assetCreateForm" onSubmit={createAsset}>
+          <label>Asset<input name="assetTag" placeholder="เว้นว่างเพื่อให้ระบบสร้างอัตโนมัติ" /></label>
+          <label>Asset Name<input name="name" required placeholder="เช่น Lenovo ThinkPad E14" /></label>
+          <label>AssetAcc<input name="assetAcc" /></label>
+          <label>S/N<input name="serialNumber" /></label>
+          <label>User<input name="assignedTo" /></label>
+          <label>Position<input name="userPosition" /></label>
+          <label>Location<input name="location" /></label>
+          <label>Years<input name="purchaseDate" type="date" /></label>
+          <label>Status
+            <select name="status" defaultValue="IN_STOCK">
+              {assetStatusOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+          </label>
+          <label>Brand<input name="manufacturer" /></label>
+          <label>Model<input name="model" /></label>
+          <label>Notation<textarea name="notes" /></label>
+          <label>Price<input name="purchasePrice" inputMode="decimal" /></label>
+          <div className="formActions">
+            <button type="submit">บันทึก Asset</button>
+            <button className="secondary" type="button" onClick={() => setShowForm(false)}>ยกเลิก</button>
+          </div>
+        </form>
+      ) : null}
+      {message ? <p className="notice assetInlineNotice">{message}</p> : null}
       <div className="tableWrap">
-        <table>
-          <thead><tr><th>Asset</th><th>User</th><th>Status</th><th>Warranty</th><th>Price</th></tr></thead>
+        <table className="assetReportTable">
+          <thead>
+            <tr>
+              <th>No.</th>
+              <th>Asset</th>
+              <th>AssetAcc</th>
+              <th>S/N</th>
+              <th>User</th>
+              <th>Position</th>
+              <th>Location</th>
+              <th>Years</th>
+              <th>Status</th>
+              <th>Brand</th>
+              <th>Model</th>
+              <th>Notation</th>
+              <th>Price</th>
+            </tr>
+          </thead>
           <tbody>
-            {data.assets.slice(0, 20).map((asset) => (
+            {data.assets.map((asset, index) => (
               <tr key={asset.id}>
+                <td>{index + 1}</td>
                 <td><strong>{asset.assetTag}</strong><br /><span className="small">{asset.name}</span></td>
+                <td>{asset.assetAcc ?? "-"}</td>
+                <td>{asset.serialNumber ?? "-"}</td>
                 <td>{asset.assignedTo ?? "-"}</td>
-                <td><span className="badge">{asset.status}</span></td>
-                <td>{asset.warrantyUntil ? new Date(asset.warrantyUntil).toLocaleDateString("th-TH") : "-"}</td>
-                <td>{formatMoney(asset.purchasePrice)} บาท</td>
+                <td>{asset.userPosition ?? "-"}</td>
+                <td>{asset.branch?.name ?? asset.location ?? "-"}</td>
+                <td>{purchaseYear(asset.purchaseDate) || "-"}</td>
+                <td><span className="badge">{statusLabel(asset.status)}</span></td>
+                <td>{asset.manufacturer ?? "-"}</td>
+                <td>{asset.model ?? "-"}</td>
+                <td>{asset.notes ?? "-"}</td>
+                <td>{formatMoney(asset.purchasePrice)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-    </PlaceholderPanel>
+    </section>
   );
 }
-
 function UsersPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppData) => void }) {
   const [message, setMessage] = useState("");
 
@@ -404,13 +523,13 @@ function UsersPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppDa
     });
 
     if (!response.ok) {
-      setMessage("สร้าง user ไม่สำเร็จ กรุณาตรวจข้อมูลซ้ำ");
+      setMessage("à¸ªà¸£à¹‰à¸²à¸‡ user à¹„à¸¡à¹ˆà¸ªà¸³à¹€à¸£à¹‡à¸ˆ à¸à¸£à¸¸à¸“à¸²à¸•à¸£à¸§à¸ˆà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸‹à¹‰à¸³");
       return;
     }
 
     const appResponse = await fetch("/api/app");
     onRefresh(await appResponse.json());
-    setMessage("สร้าง user สำเร็จ");
+    setMessage("à¸ªà¸£à¹‰à¸²à¸‡ user à¸ªà¸³à¹€à¸£à¹‡à¸ˆ");
     event.currentTarget.reset();
   }
 
@@ -418,11 +537,11 @@ function UsersPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppDa
     <section className="moduleGrid">
       <form className="panel form" onSubmit={createUser}>
         <div className="panelHeader">
-          <h2>สร้าง User</h2>
-          <p>เฉพาะ Admin สูงสุดเท่านั้น</p>
+          <h2>à¸ªà¸£à¹‰à¸²à¸‡ User</h2>
+          <p>à¹€à¸‰à¸žà¸²à¸° Admin à¸ªà¸¹à¸‡à¸ªà¸¸à¸”à¹€à¸—à¹ˆà¸²à¸™à¸±à¹‰à¸™</p>
         </div>
         <label>Username<input name="username" required minLength={3} /></label>
-        <label>ชื่อผู้ใช้<input name="name" required /></label>
+        <label>à¸Šà¸·à¹ˆà¸­à¸œà¸¹à¹‰à¹ƒà¸Šà¹‰<input name="name" required /></label>
         <label>Email<input name="email" type="email" /></label>
         <label>Password<input name="password" type="password" required minLength={8} /></label>
         <label>Role
@@ -431,9 +550,9 @@ function UsersPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppDa
           </select>
         </label>
         {message ? <p className="notice">{message}</p> : null}
-        <button type="submit">สร้าง User</button>
+        <button type="submit">à¸ªà¸£à¹‰à¸²à¸‡ User</button>
       </form>
-      <PlaceholderPanel title="Users & Roles" description="บัญชีผู้ใช้ในระบบ">
+      <PlaceholderPanel title="Users & Roles" description="à¸šà¸±à¸à¸Šà¸µà¸œà¸¹à¹‰à¹ƒà¸Šà¹‰à¹ƒà¸™à¸£à¸°à¸šà¸š">
         <div className="tableWrap">
           <table>
             <thead><tr><th>Username</th><th>Name</th><th>Role</th><th>Status</th></tr></thead>
@@ -505,9 +624,9 @@ export default function ItsmConsole() {
       </aside>
       <section className="page">
         {activeMenu === "dashboard" ? <Dashboard data={data} /> : null}
-        {activeMenu === "assets" ? <AssetsPage data={data} /> : null}
+        {activeMenu === "assets" ? <AssetsPage data={data} onRefresh={setData} /> : null}
         {activeMenu === "newEmployee" ? (
-          <PlaceholderPanel title="New Employee Request" description="HR แจ้งพนักงานใหม่ และ IT ติดตามการเตรียมอุปกรณ์">
+          <PlaceholderPanel title="New Employee Request" description="HR à¹à¸ˆà¹‰à¸‡à¸žà¸™à¸±à¸à¸‡à¸²à¸™à¹ƒà¸«à¸¡à¹ˆ à¹à¸¥à¸° IT à¸•à¸´à¸”à¸•à¸²à¸¡à¸à¸²à¸£à¹€à¸•à¸£à¸µà¸¢à¸¡à¸­à¸¸à¸›à¸à¸£à¸“à¹Œ">
             <div className="recordList">
               {data.hrRequests.map((request) => (
                 <div className="recordItem" key={request.id}>
@@ -519,7 +638,7 @@ export default function ItsmConsole() {
           </PlaceholderPanel>
         ) : null}
         {activeMenu === "transfer" ? (
-          <PlaceholderPanel title="Assign / Transfer" description="ส่งมอบหรือโอนย้ายอุปกรณ์">
+          <PlaceholderPanel title="Assign / Transfer" description="à¸ªà¹ˆà¸‡à¸¡à¸­à¸šà¸«à¸£à¸·à¸­à¹‚à¸­à¸™à¸¢à¹‰à¸²à¸¢à¸­à¸¸à¸›à¸à¸£à¸“à¹Œ">
             <div className="recordList">
               {data.movements.map((movement) => (
                 <div className="recordItem" key={movement.id}>
@@ -530,12 +649,12 @@ export default function ItsmConsole() {
             </div>
           </PlaceholderPanel>
         ) : null}
-        {activeMenu === "return" ? <PlaceholderPanel title="Return" description="รับคืนอุปกรณ์จากพนักงาน" /> : null}
+        {activeMenu === "return" ? <PlaceholderPanel title="Return" description="à¸£à¸±à¸šà¸„à¸·à¸™à¸­à¸¸à¸›à¸à¸£à¸“à¹Œà¸ˆà¸²à¸à¸žà¸™à¸±à¸à¸‡à¸²à¸™" /> : null}
         {activeMenu === "audit" ? (
-          <PlaceholderPanel title="Audit Log" description="ตรวจสอบประวัติการใช้งานระบบ">
+          <PlaceholderPanel title="Audit Log" description="à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¸›à¸£à¸°à¸§à¸±à¸•à¸´à¸à¸²à¸£à¹ƒà¸Šà¹‰à¸‡à¸²à¸™à¸£à¸°à¸šà¸š">
             <div className="tableWrap">
               <table>
-                <thead><tr><th>เวลา</th><th>Module</th><th>Action</th><th>Status</th></tr></thead>
+                <thead><tr><th>à¹€à¸§à¸¥à¸²</th><th>Module</th><th>Action</th><th>Status</th></tr></thead>
                 <tbody>
                   {data.auditLogs.map((log) => (
                     <tr key={log.id}>
@@ -555,3 +674,4 @@ export default function ItsmConsole() {
     </main>
   );
 }
+
