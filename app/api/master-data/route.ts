@@ -16,6 +16,18 @@ const masterDataSchema = z.discriminatedUnion("kind", [
     code: z.string().trim().min(2).max(30),
     name: z.string().trim().min(2).max(120),
     description: z.string().trim().max(240).optional().or(z.literal(""))
+  }),
+  z.object({
+    kind: z.literal("assetType"),
+    code: z.string().trim().min(2).max(30),
+    name: z.string().trim().min(2).max(120),
+    prefix: z.string().trim().min(2).max(10),
+    description: z.string().trim().max(240).optional().or(z.literal(""))
+  }),
+  z.object({
+    kind: z.literal("typeBrand"),
+    assetTypeId: z.string().trim().min(1),
+    brandId: z.string().trim().min(1)
   })
 ]);
 
@@ -50,6 +62,41 @@ export async function POST(request: Request) {
       where: { code: parsed.data.code },
       update: { name: parsed.data.name, description: cleanText(parsed.data.description) },
       create: { code: parsed.data.code, name: parsed.data.name, description: cleanText(parsed.data.description) }
+    });
+  }
+
+  if (parsed.data.kind === "assetType") {
+    record = await prisma.assetTypeMaster.upsert({
+      where: { code: parsed.data.code },
+      update: {
+        name: parsed.data.name,
+        prefix: parsed.data.prefix,
+        description: cleanText(parsed.data.description),
+        isActive: true
+      },
+      create: {
+        code: parsed.data.code,
+        name: parsed.data.name,
+        prefix: parsed.data.prefix,
+        description: cleanText(parsed.data.description),
+        isActive: true
+      }
+    });
+  }
+
+  if (parsed.data.kind === "typeBrand") {
+    record = await prisma.assetTypeBrand.upsert({
+      where: {
+        assetTypeId_brandId: {
+          assetTypeId: parsed.data.assetTypeId,
+          brandId: parsed.data.brandId
+        }
+      },
+      update: {},
+      create: {
+        assetTypeId: parsed.data.assetTypeId,
+        brandId: parsed.data.brandId
+      }
     });
   }
 

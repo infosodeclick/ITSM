@@ -76,7 +76,14 @@ type AppData = {
   masterData: {
     branches: Array<{ id: string; code: string; name: string }>;
     brands: Array<{ id: string; code: string; name: string }>;
-    assetTypes: string[];
+    assetTypes: Array<{
+      id: string;
+      code: string;
+      name: string;
+      prefix: string;
+      typeBrands: Array<{ brand: { id: string; code: string; name: string } }>;
+    }>;
+    supportedAssetTypes: string[];
   };
   hrRequests: Array<{ id: string; employeeName: string; department: string | null; status: string; createdAt: string }>;
   movements: Array<{ id: string; type: string; assetName: string | null; toHolder: string | null; movedAt: string }>;
@@ -91,7 +98,7 @@ const menuItems: Array<{ key: MenuKey; label: string; roles: UserRole[] }> = [
   { key: "transfer", label: "Assign / Transfer", roles: ["SUPER_ADMIN", "IT_ADMIN", "IT_STAFF"] },
   { key: "return", label: "Return", roles: ["SUPER_ADMIN", "IT_ADMIN", "IT_STAFF"] },
   { key: "audit", label: "Audit Log", roles: ["SUPER_ADMIN", "IT_ADMIN", "IT_STAFF", "HR"] },
-  { key: "masterData", label: "ข้อมูลหลัก", roles: ["SUPER_ADMIN", "IT_ADMIN", "IT_STAFF"] },
+  { key: "masterData", label: "Master Data", roles: ["SUPER_ADMIN", "IT_ADMIN", "IT_STAFF"] },
   { key: "users", label: "Users & Roles", roles: ["SUPER_ADMIN"] }
 ];
 
@@ -163,6 +170,10 @@ function statusLabel(status: string) {
 
 function assetTypeLabel(type: string) {
   return assetTypeOptions.find(([value]) => value === type)?.[1] ?? type;
+}
+
+function fallbackTypeName(type: string) {
+  return assetTypeLabel(type);
 }
 
 function LoginPanel({ onLogin }: { onLogin: (data: AppData) => void }) {
@@ -423,6 +434,10 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
   const [message, setMessage] = useState("");
   const [selectedType, setSelectedType] = useState("DESKTOP");
   const [selectedBrand, setSelectedBrand] = useState("all");
+  const selectedTypeMaster = data.masterData.assetTypes.find((type) => type.code === selectedType);
+  const visibleAssetTypes = data.masterData.assetTypes.length
+    ? data.masterData.assetTypes
+    : assetTypeOptions.map(([code, name]) => ({ id: code, code, name, prefix: assetTypePrefixes[code] ?? code, typeBrands: [] }));
 
   const assetsBySelectedType = useMemo(
     () => data.assets.filter((asset) => asset.type === selectedType),
@@ -430,13 +445,8 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
   );
 
   const brandOptionsForType = useMemo(() => {
-    const brands = new Map<string, string>();
-    assetsBySelectedType.forEach((asset) => {
-      const name = asset.brand?.name ?? asset.manufacturer;
-      if (name) brands.set(name, name);
-    });
-    return Array.from(brands.values()).sort((a, b) => a.localeCompare(b));
-  }, [assetsBySelectedType]);
+    return selectedTypeMaster?.typeBrands.map((item) => item.brand).sort((a, b) => a.name.localeCompare(b.name)) ?? [];
+  }, [selectedTypeMaster]);
 
   const filteredAssets = useMemo(() => {
     return assetsBySelectedType.filter((asset) => {
@@ -446,7 +456,7 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
   }, [assetsBySelectedType, selectedBrand]);
 
   const nextAssetNo = useMemo(() => {
-    const prefix = assetTypePrefixes[selectedType] ?? "OTH";
+    const prefix = selectedTypeMaster?.prefix ?? assetTypePrefixes[selectedType] ?? "OTH";
     const lastNumber = data.assets
       .filter((asset) => asset.type === selectedType || asset.assetTag.startsWith(`${prefix}-`))
       .reduce((max, asset) => {
@@ -456,7 +466,7 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
       }, 0);
 
     return `${prefix}-${String(lastNumber + 1).padStart(3, "0")}`;
-  }, [data.assets, selectedType]);
+  }, [data.assets, selectedType, selectedTypeMaster]);
 
   async function createAsset(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -507,7 +517,7 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
         <form className="assetCreateForm" onSubmit={createAsset}>
           <label>ประเภท
             <select value={selectedType} onChange={(event) => { setSelectedType(event.target.value); setSelectedBrand("all"); }}>
-              {assetTypeOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              {visibleAssetTypes.map((type) => <option key={type.id} value={type.code}>{type.name}</option>)}
             </select>
           </label>
           <label>NO<input value={nextAssetNo} readOnly aria-readonly="true" /></label>
@@ -529,7 +539,7 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
           <label>Brand
             <select name="brandId" defaultValue="">
               <option value="">เลือก Brand</option>
-              {data.masterData.brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}
+              {brandOptionsForType.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}
             </select>
           </label>
           <label>Model<input name="model" /></label>
@@ -545,17 +555,17 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
       <div className="assetFilterBar">
         <label>ประเภท
           <select value={selectedType} onChange={(event) => { setSelectedType(event.target.value); setSelectedBrand("all"); }}>
-            {assetTypeOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            {visibleAssetTypes.map((type) => <option key={type.id} value={type.code}>{type.name}</option>)}
           </select>
         </label>
         <label>Brand
           <select value={selectedBrand} onChange={(event) => setSelectedBrand(event.target.value)} disabled={brandOptionsForType.length === 0}>
-            <option value="all">ทั้งหมดใน {assetTypeLabel(selectedType)}</option>
-            {brandOptionsForType.map((brand) => <option key={brand} value={brand}>{brand}</option>)}
+            <option value="all">ทั้งหมดใน {selectedTypeMaster?.name ?? fallbackTypeName(selectedType)}</option>
+            {brandOptionsForType.map((brand) => <option key={brand.id} value={brand.name}>{brand.name}</option>)}
           </select>
         </label>
         <div className="assetFilterSummary">
-          <span>{assetTypeLabel(selectedType)}</span>
+          <span>{selectedTypeMaster?.name ?? fallbackTypeName(selectedType)}</span>
           <strong>{filteredAssets.length} รายการ</strong>
         </div>
       </div>
@@ -601,7 +611,7 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
         </table>
       </div>
       ) : (
-        <p className="empty">ยังไม่มีรายการ {assetTypeLabel(selectedType)}{selectedBrand === "all" ? "" : ` ของ ${selectedBrand}`}</p>
+        <p className="empty">ยังไม่มีรายการ {selectedTypeMaster?.name ?? fallbackTypeName(selectedType)}{selectedBrand === "all" ? "" : ` ของ ${selectedBrand}`}</p>
       )}
     </section>
   );
@@ -610,7 +620,7 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
 function MasterDataPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppData) => void }) {
   const [message, setMessage] = useState("");
 
-  async function submitMasterData(event: FormEvent<HTMLFormElement>, kind: "location" | "brand") {
+  async function submitMasterData(event: FormEvent<HTMLFormElement>, kind: "location" | "brand" | "assetType" | "typeBrand") {
     event.preventDefault();
     setMessage("");
     const form = new FormData(event.currentTarget);
@@ -642,8 +652,8 @@ function MasterDataPage({ data, onRefresh }: { data: AppData; onRefresh: (data: 
       <div className="dashboardHero">
         <div>
           <p className="eyebrow">Master Data</p>
-          <h1>ข้อมูลหลักสำหรับ dropdown</h1>
-          <p>เพิ่ม Location และ Brand เพื่อใช้ตอนเพิ่มอุปกรณ์ ลดการพิมพ์ผิด</p>
+          <h1>Master Data</h1>
+          <p>จัดการ Location, ประเภท และ Brand ที่ใช้ในหน้า Assets</p>
         </div>
       </div>
       {message ? <p className="notice">{message}</p> : null}
@@ -659,6 +669,22 @@ function MasterDataPage({ data, onRefresh }: { data: AppData; onRefresh: (data: 
           <button type="submit">บันทึก Location</button>
         </form>
 
+        <form className="panel form" onSubmit={(event) => submitMasterData(event, "assetType")}>
+          <div className="panelHeader">
+            <h2>ประเภท</h2>
+            <p>ประเภทเดียวกับที่เลือกในหน้า Assets เช่น PC / Notebook / Mini PC</p>
+          </div>
+          <label>Code
+            <select name="code" required defaultValue="DESKTOP">
+              {data.masterData.supportedAssetTypes.map((code) => <option key={code} value={code}>{fallbackTypeName(code)}</option>)}
+            </select>
+          </label>
+          <label>Name<input name="name" required placeholder="PC" /></label>
+          <label>Prefix<input name="prefix" required placeholder="PC" /></label>
+          <label>Description<textarea name="description" /></label>
+          <button type="submit">บันทึกประเภท</button>
+        </form>
+
         <form className="panel form" onSubmit={(event) => submitMasterData(event, "brand")}>
           <div className="panelHeader">
             <h2>Brand</h2>
@@ -669,15 +695,45 @@ function MasterDataPage({ data, onRefresh }: { data: AppData; onRefresh: (data: 
           <label>Description<textarea name="description" /></label>
           <button type="submit">บันทึก Brand</button>
         </form>
+
+        <form className="panel form" onSubmit={(event) => submitMasterData(event, "typeBrand")}>
+          <div className="panelHeader">
+            <h2>Brand ในประเภท</h2>
+            <p>กำหนดว่าแต่ละประเภทมี Brand อะไรให้เลือกได้</p>
+          </div>
+          <label>ประเภท
+            <select name="assetTypeId" required defaultValue="">
+              <option value="">เลือกประเภท</option>
+              {data.masterData.assetTypes.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}
+            </select>
+          </label>
+          <label>Brand
+            <select name="brandId" required defaultValue="">
+              <option value="">เลือก Brand</option>
+              {data.masterData.brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}
+            </select>
+          </label>
+          <button type="submit">ผูก Brand กับประเภท</button>
+        </form>
       </div>
 
       <div className="dashboardChartsTop">
+        <PlaceholderPanel title="ประเภทและ Brand" description="ใช้กำหนด dropdown Brand ในหน้า Assets">
+          <div className="recordList">
+            {data.masterData.assetTypes.map((type) => (
+              <div className="recordItem" key={type.id}>
+                <strong>{type.name} ({type.prefix})</strong>
+                <span>{type.typeBrands.length ? type.typeBrands.map((item) => item.brand.name).join(", ") : "ยังไม่ได้กำหนด Brand"}</span>
+              </div>
+            ))}
+          </div>
+        </PlaceholderPanel>
         <PlaceholderPanel title="Location ที่มีในระบบ" description="ใช้ใน dropdown ตอนเพิ่มอุปกรณ์">
           <div className="recordList">
             {data.masterData.branches.map((item) => <div className="recordItem" key={item.id}><strong>{item.name}</strong><span>{item.code}</span></div>)}
           </div>
         </PlaceholderPanel>
-        <PlaceholderPanel title="Brand ที่มีในระบบ" description="ใช้ใน dropdown ตอนเพิ่มอุปกรณ์">
+        <PlaceholderPanel title="Brand ที่มีในระบบ" description="ใช้ผูกกับประเภท">
           <div className="recordList">
             {data.masterData.brands.map((item) => <div className="recordItem" key={item.id}><strong>{item.name}</strong><span>{item.code}</span></div>)}
           </div>

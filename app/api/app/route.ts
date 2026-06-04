@@ -40,7 +40,7 @@ export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [assets, employees, budgets, auditLogs, users, roles, hrRequests, movements, branches, brands] =
+  const [assets, employees, budgets, auditLogs, users, roles, hrRequests, movements, branches, brands, assetTypes] =
     await Promise.all([
       prisma.asset.findMany({
         include: { branch: true, brand: true, category: true, department: true },
@@ -61,7 +61,12 @@ export async function GET() {
       prisma.hrRequest.findMany({ orderBy: [{ createdAt: "desc" }], take: 60 }),
       prisma.assetMovement.findMany({ orderBy: [{ movedAt: "desc" }], take: 60 }),
       prisma.branch.findMany({ orderBy: [{ name: "asc" }] }),
-      prisma.brand.findMany({ orderBy: [{ name: "asc" }] })
+      prisma.brand.findMany({ orderBy: [{ name: "asc" }] }),
+      prisma.assetTypeMaster.findMany({
+        where: { isActive: true },
+        include: { typeBrands: { include: { brand: true } } },
+        orderBy: [{ name: "asc" }]
+      })
     ]);
 
   const today = new Date();
@@ -133,7 +138,8 @@ export async function GET() {
     masterData: {
       branches,
       brands,
-      assetTypes: Object.values(AssetType)
+      assetTypes,
+      supportedAssetTypes: Object.values(AssetType)
     },
     hrRequests,
     movements

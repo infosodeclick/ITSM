@@ -170,6 +170,56 @@ async function main() {
     )
   );
 
+  const assetTypeMasters = [
+    ["DESKTOP", "PC", "PC"],
+    ["NOTEBOOK", "Notebook", "NB"],
+    ["MINI_PC", "Mini PC", "MINI"],
+    ["SERVER", "Server", "SRV"],
+    ["MONITOR", "Monitor", "MON"],
+    ["PRINTER", "Printer", "PRN"],
+    ["NETWORK", "Network", "NET"],
+    ["OTHER", "Other", "OTH"]
+  ] as const;
+
+  const createdAssetTypes = await Promise.all(
+    assetTypeMasters.map(([code, name, prefix]) =>
+      prisma.assetTypeMaster.upsert({
+        where: { code },
+        update: { name, prefix, isActive: true },
+        create: { code, name, prefix, isActive: true }
+      })
+    )
+  );
+
+  const allBrands = await prisma.brand.findMany();
+  const brandByCode = new Map(allBrands.map((brand) => [brand.code, brand.id]));
+  const assetTypeByCode = new Map(createdAssetTypes.map((type) => [type.code, type.id]));
+  const typeBrandDefaults: Record<string, string[]> = {
+    DESKTOP: ["DELL", "HP", "LENOVO", "ACER", "ASUS"],
+    NOTEBOOK: ["DELL", "HP", "LENOVO", "APPLE", "ACER", "ASUS", "MSI"],
+    MINI_PC: ["DELL", "HP", "LENOVO", "ASUS", "ACER"],
+    SERVER: ["DELL", "HPE", "LENOVO", "FUJITSU"],
+    MONITOR: ["DELL", "HP", "LG", "SAMSUNG", "BENQ", "VIEWSONIC"],
+    PRINTER: ["CANON", "EPSON", "BROTHER", "HP", "KYOCERA"],
+    NETWORK: ["CISCO", "FORTINET", "UBIQUITI", "TP_LINK", "ARUBA"],
+    OTHER: ["OTHER"]
+  };
+
+  for (const [typeCode, brandCodes] of Object.entries(typeBrandDefaults)) {
+    const assetTypeId = assetTypeByCode.get(typeCode);
+    if (!assetTypeId) continue;
+
+    await prisma.assetTypeBrand.createMany({
+      data: brandCodes
+        .map((brandCode) => {
+          const brandId = brandByCode.get(brandCode);
+          return brandId ? { assetTypeId, brandId } : null;
+        })
+        .filter((item): item is { assetTypeId: string; brandId: string } => Boolean(item)),
+      skipDuplicates: true
+    });
+  }
+
   await prisma.asset.upsert({
     where: { assetTag: "IT-0001" },
     update: {},

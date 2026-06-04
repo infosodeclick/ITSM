@@ -286,8 +286,34 @@ model Brand {
   name        String
   description String?
   assets      Asset[]
+  typeBrands  AssetTypeBrand[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model AssetTypeMaster {
+  id          String           @id @default(cuid())
+  code        String           @unique
+  name        String
+  prefix      String
+  description String?
+  isActive    Boolean          @default(true)
+  typeBrands  AssetTypeBrand[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([isActive])
+}
+
+model AssetTypeBrand {
+  assetTypeId String
+  brandId     String
+  assetType   AssetTypeMaster @relation(fields: [assetTypeId], references: [id], onDelete: Cascade)
+  brand       Brand           @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  createdAt   DateTime        @default(now())
+
+  @@id([assetTypeId, brandId])
+  @@index([brandId])
 }
 
 model SoftwareLicense {

@@ -28,15 +28,16 @@ export async function POST(request: Request) {
   }
 
   try {
-    const [brand, branch] = await Promise.all([
+    const [brand, branch, assetTypeMaster] = await Promise.all([
       parsed.data.brandId ? prisma.brand.findUnique({ where: { id: parsed.data.brandId } }) : null,
-      parsed.data.branchId ? prisma.branch.findUnique({ where: { id: parsed.data.branchId } }) : null
+      parsed.data.branchId ? prisma.branch.findUnique({ where: { id: parsed.data.branchId } }) : null,
+      prisma.assetTypeMaster.findUnique({ where: { code: parsed.data.type } })
     ]);
     const data = {
       ...parsed.data,
       manufacturer: brand?.name ?? parsed.data.manufacturer,
       location: branch?.name ?? parsed.data.location,
-      assetTag: parsed.data.assetTag ?? (await generateAssetCode(prisma, parsed.data.type))
+      assetTag: parsed.data.assetTag ?? (await generateAssetCode(prisma, parsed.data.type, assetTypeMaster?.prefix))
     };
 
     const asset = await prisma.asset.create({ data });

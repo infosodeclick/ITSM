@@ -31,8 +31,8 @@ export function getAssetCodePrefix(type: AssetType) {
   return assetTypePrefixes[type] ?? assetTypePrefixes.OTHER;
 }
 
-export async function generateAssetCode(prisma: PrismaClient, type: AssetType) {
-  const prefix = getAssetCodePrefix(type);
+export async function generateAssetCode(prisma: PrismaClient, type: AssetType, prefixOverride?: string | null) {
+  const prefix = prefixOverride || getAssetCodePrefix(type);
   const codeStart = `${prefix}-`;
 
   const existingAssets = await prisma.asset.findMany({
