@@ -26,6 +26,19 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+.blankPage {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  background: #ffffff;
+  color: #667085;
+}
+
+.blankPage p {
+  margin: 0;
+  font-size: 14px;
+}
+
 button,
 input,
 select,
