@@ -243,6 +243,12 @@ h1 {
   align-items: start;
 }
 
+.dashboardGrid .panel,
+.dashboardCharts .panel,
+.dashboardBudgetGrid .panel {
+  box-shadow: 0 10px 26px rgba(16, 24, 40, 0.06);
+}
+
 .dashboardStack {
   display: grid;
   gap: 18px;
@@ -275,6 +281,64 @@ h1 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
+}
+
+.dashboardBudgetGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.budgetHero {
+  background:
+    linear-gradient(135deg, rgba(11, 107, 91, 0.08), rgba(23, 64, 111, 0.04)),
+    var(--panel);
+}
+
+.budgetMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 16px;
+}
+
+.budgetMetrics div {
+  border: 1px solid rgba(11, 107, 91, 0.16);
+  border-radius: 8px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.budgetMetrics span,
+.budgetMetrics small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.budgetMetrics strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--brand-strong);
+  font-size: 22px;
+}
+
+.budgetBars {
+  display: grid;
+  gap: 14px;
+  padding: 0 16px 16px;
+}
+
+.budgetBarRow {
+  display: grid;
+  gap: 6px;
+}
+
+.budgetBarRow small {
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .filterGrid {
@@ -450,6 +514,10 @@ h1 {
   background: var(--brand);
 }
 
+.budgetFill {
+  background: linear-gradient(90deg, var(--brand), #17406f);
+}
+
 .buttonLink {
   display: inline-flex;
   align-items: center;
@@ -610,6 +678,7 @@ th {
   .layout,
   .dashboardGrid,
   .dashboardCharts,
+  .dashboardBudgetGrid,
   .moduleGrid {
     grid-template-columns: 1fr;
   }
@@ -631,6 +700,7 @@ th {
 
   .stats,
   .metricGrid,
+  .budgetMetrics,
   .filterGrid,
   .formGrid {
     grid-template-columns: 1fr;

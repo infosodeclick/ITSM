@@ -321,6 +321,19 @@ function formatMoney(value: unknown) {
   return new Intl.NumberFormat("th-TH", { maximumFractionDigits: 2 }).format(amount);
 }
 
+function moneyValue(value: unknown) {
+  const amount = Number(value);
+  return Number.isNaN(amount) ? 0 : amount;
+}
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("th-TH", {
+    maximumFractionDigits: 0,
+    style: "currency",
+    currency: "THB"
+  }).format(value);
+}
+
 function statusClass(status: AssetStatus) {
   if (
     status === AssetStatus.REPAIR ||
@@ -683,6 +696,45 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
     const yearChartRows = chartRowsFromCounts(countBy(dashboardAssets, (asset) => purchaseYearLabel(asset.purchaseDate)));
     const departmentChartRows = chartRowsFromCounts(countBy(dashboardAssets, getAssetDepartment));
     const branchChartRows = chartRowsFromCounts(countBy(dashboardAssets, getAssetBranch));
+    const budgetYearRows = Object.values(
+      dashboardAssets.reduce<
+        Record<
+          string,
+          {
+            label: string;
+            sortYear: number;
+            totalCost: number;
+            assets: number;
+            pricedAssets: number;
+          }
+        >
+      >((summary, asset) => {
+        const label = purchaseYearLabel(asset.purchaseDate);
+        const purchaseYear = asset.purchaseDate ? new Date(asset.purchaseDate).getFullYear() : 0;
+        const cost = moneyValue(asset.purchasePrice);
+        const row = summary[label] ?? {
+          label,
+          sortYear: Number.isNaN(purchaseYear) ? 0 : purchaseYear,
+          totalCost: 0,
+          assets: 0,
+          pricedAssets: 0
+        };
+
+        row.assets += 1;
+        row.totalCost += cost;
+        if (cost > 0) row.pricedAssets += 1;
+        summary[label] = row;
+        return summary;
+      }, {})
+    ).sort((a, b) => {
+      if (a.sortYear === 0) return 1;
+      if (b.sortYear === 0) return -1;
+      return b.sortYear - a.sortYear;
+    });
+    const totalAssetValue = budgetYearRows.reduce((sum, row) => sum + row.totalCost, 0);
+    const pricedAssets = dashboardAssets.filter((asset) => moneyValue(asset.purchasePrice) > 0).length;
+    const topBudgetYear = [...budgetYearRows].sort((a, b) => b.totalCost - a.totalCost)[0];
+    const budgetChartMax = Math.max(1, ...budgetYearRows.map((row) => row.totalCost));
     const chartMax = Math.max(
       1,
       ...statusChartRows.map((row) => row.value),
@@ -912,6 +964,77 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
           </div>
         </div>
         </div>
+
+        <section className="dashboardBudgetGrid">
+          <div className="panel modulePanel budgetHero">
+            <div className="panelHeader">
+              <h2>งบประมาณทรัพย์สิน IT</h2>
+              <p>สรุปมูลค่าจาก Price ของ asset ตาม filter ปัจจุบัน</p>
+            </div>
+            <div className="budgetMetrics">
+              <div>
+                <span>มูลค่ารวม</span>
+                <strong>{formatCurrency(totalAssetValue)}</strong>
+              </div>
+              <div>
+                <span>รายการที่มีราคา</span>
+                <strong>{pricedAssets}</strong>
+              </div>
+              <div>
+                <span>ปีที่ใช้งบสูงสุด</span>
+                <strong>{topBudgetYear ? topBudgetYear.label : "-"}</strong>
+                <small>{topBudgetYear ? formatCurrency(topBudgetYear.totalCost) : ""}</small>
+              </div>
+            </div>
+            <div className="budgetBars">
+              {budgetYearRows.length === 0 ? <div className="empty">ยังไม่มีข้อมูลราคา</div> : null}
+              {budgetYearRows.slice(0, 8).map((row) => (
+                <div className="budgetBarRow" key={row.label}>
+                  <div className="barLabel">
+                    <span>{row.label}</span>
+                    <strong>{formatCurrency(row.totalCost)}</strong>
+                  </div>
+                  <div className="barTrack" aria-hidden="true">
+                    <div className="barFill budgetFill" style={{ width: `${Math.max(5, (row.totalCost / budgetChartMax) * 100)}%` }} />
+                  </div>
+                  <small>
+                    {row.assets} เครื่อง / มีราคา {row.pricedAssets} เครื่อง
+                  </small>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="panel modulePanel">
+            <div className="panelHeader">
+              <h2>งบประมาณแยกตามปี</h2>
+              <p>ดูได้ว่าแต่ละปีใช้เงินซื้ออุปกรณ์ไปเท่าไร</p>
+            </div>
+            <div className="tableWrap">
+              <table className="compactTable">
+                <thead>
+                  <tr>
+                    <th>ปีที่ซื้อ</th>
+                    <th>จำนวน</th>
+                    <th>มีราคา</th>
+                    <th>มูลค่า</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {budgetYearRows.map((row) => (
+                    <tr key={row.label}>
+                      <td>{row.label}</td>
+                      <td>{row.assets}</td>
+                      <td>{row.pricedAssets}</td>
+                      <td>{formatCurrency(row.totalCost)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {budgetYearRows.length === 0 ? <div className="empty">ยังไม่มีข้อมูลราคา</div> : null}
+            </div>
+          </div>
+        </section>
 
         <section className="dashboardCharts">
           <div className="panel modulePanel">
