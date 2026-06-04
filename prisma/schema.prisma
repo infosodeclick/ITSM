@@ -387,6 +387,7 @@ model Asset {
   departmentId      String?
   branchId          String?
   vendorId          String?
+  assetAcc          String?
   serialNumber      String?
   manufacturer      String?
   model             String?
@@ -405,6 +406,7 @@ model Asset {
   warrantyUntil     DateTime?
   condition         String?
   imageUrl          String?
+  windowsKey        String?
   notes             String?
   createdById       String?
   updatedById       String?

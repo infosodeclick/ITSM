@@ -328,6 +328,16 @@ h1 {
   padding: 16px;
 }
 
+.importForm {
+  display: grid;
+  gap: 10px;
+  max-width: 720px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: var(--panel-soft);
+}
+
 .panel.form {
   gap: 12px;
 }

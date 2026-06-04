@@ -39,10 +39,26 @@ export async function GET() {
     orderBy: [{ assetTag: "asc" }]
   });
 
-  const header = ["NO.", "Asset", "S/N", "User", "Position", "Location", "Years", "Status", "Brand", "Model", "Notation", "Price"];
+  const header = [
+    "NO.",
+    "Asset",
+    "Asset Acc",
+    "S/N",
+    "User",
+    "Position",
+    "Location",
+    "Years",
+    "Status",
+    "Brand",
+    "Model",
+    "Notation",
+    "windows key",
+    "Price"
+  ];
   const rows = assets.map((asset, index) => [
     index + 1,
-    `${asset.assetTag} - ${asset.name}`,
+    asset.name,
+    asset.assetAcc,
     asset.serialNumber,
     asset.assignedTo ?? asset.currentEmployee?.fullName,
     asset.userPosition ?? asset.currentEmployee?.position,
@@ -52,6 +68,7 @@ export async function GET() {
     asset.manufacturer,
     asset.model,
     asset.notes,
+    asset.windowsKey,
     asset.purchasePrice
   ]);
 

@@ -32,6 +32,7 @@ const assetFieldsSchema = {
   name: z.string().trim().min(2).max(120),
   type: z.nativeEnum(AssetType).default(AssetType.OTHER),
   status: z.nativeEnum(AssetStatus).default(AssetStatus.IN_STOCK),
+  assetAcc: optionalText,
   serialNumber: optionalText,
   manufacturer: optionalText,
   model: optionalText,
@@ -41,6 +42,7 @@ const assetFieldsSchema = {
   purchaseDate: optionalDate,
   purchasePrice: optionalDecimal,
   warrantyUntil: optionalDate,
+  windowsKey: optionalText,
   notes: optionalText
 };
 

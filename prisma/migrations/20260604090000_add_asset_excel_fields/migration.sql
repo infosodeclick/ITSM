@@ -1,0 +1,2 @@
+ALTER TABLE "Asset" ADD COLUMN "assetAcc" TEXT;
+ALTER TABLE "Asset" ADD COLUMN "windowsKey" TEXT;

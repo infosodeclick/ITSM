@@ -72,6 +72,7 @@ type DashboardFilters = {
 
 type AssetForm = {
   assetTag: string;
+  assetAcc: string;
   name: string;
   type: AssetType;
   status: AssetStatus;
@@ -84,6 +85,7 @@ type AssetForm = {
   purchaseDate: string;
   purchasePrice: string;
   warrantyUntil: string;
+  windowsKey: string;
   notes: string;
 };
 
@@ -123,6 +125,7 @@ type ModulePostBody = Record<string, string | number>;
 
 const emptyForm: AssetForm = {
   assetTag: "",
+  assetAcc: "",
   name: "",
   type: AssetType.NOTEBOOK,
   status: AssetStatus.IN_STOCK,
@@ -135,6 +138,7 @@ const emptyForm: AssetForm = {
   purchaseDate: "",
   purchasePrice: "",
   warrantyUntil: "",
+  windowsKey: "",
   notes: ""
 };
 
@@ -449,13 +453,15 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
     return assets.filter((asset) =>
       [
         asset.assetTag,
+        asset.assetAcc,
         asset.name,
         asset.serialNumber,
         asset.assignedTo,
         asset.userPosition,
         asset.location,
         asset.manufacturer,
-        asset.model
+        asset.model,
+        asset.windowsKey
       ]
         .filter(Boolean)
         .some((value) => value!.toLowerCase().includes(normalizedQuery))
@@ -576,6 +582,45 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
         setModules(data.modules);
         setModuleForm(emptyModuleForm);
         setMessage("บันทึกข้อมูลเรียบร้อยแล้ว");
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : "เกิดข้อผิดพลาด");
+      }
+    });
+  }
+
+  function importAssets(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setMessage("");
+
+    const importForm = event.currentTarget;
+    const formData = new FormData(importForm);
+
+    startTransition(async () => {
+      try {
+        const response = await fetch("/api/assets/import", {
+          method: "POST",
+          body: formData
+        });
+        const data = (await response.json()) as {
+          created?: number;
+          error?: string;
+          errors?: string[];
+          imported?: number;
+          updated?: number;
+        };
+
+        if (!response.ok) {
+          throw new Error(data.error ?? "Import ไม่สำเร็จ");
+        }
+
+        setMessage(
+          `Import แล้ว ${data.imported ?? 0} แถว: เพิ่มใหม่ ${data.created ?? 0}, อัปเดต ${data.updated ?? 0}${
+            data.errors?.length ? `, มีปัญหา ${data.errors.length} แถว` : ""
+          }`
+        );
+        importForm.reset();
+        await refreshAssets();
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : "เกิดข้อผิดพลาด");
       }
@@ -1360,12 +1405,27 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
         <section className="panel modulePanel">
           <div className="panelHeader">
             <h2>Reports</h2>
-            <p>Export รายงาน asset เป็น CSV สำหรับเปิดใน Excel ได้ทันที</p>
+            <p>Export และ import รายการ asset ตามหัวคอลัมน์ Excel ของบริษัท</p>
           </div>
           <div className="moduleBody">
+            {message ? <p className="notice">{message}</p> : null}
+            {error ? <p className="notice error">{error}</p> : null}
             <a className="buttonLink" href="/api/reports">
               Export Assets CSV
             </a>
+            <form className="importForm" onSubmit={importAssets}>
+              <label>
+                Import Assets CSV/TSV
+                <input accept=".csv,.tsv,text/csv,text/tab-separated-values" name="file" required type="file" />
+              </label>
+              <p className="small">
+                รองรับคอลัมน์: NO., Asset, Asset Acc, S/N, User, Position, Location, Years, Status, Brand, Model,
+                Notation, windows key, Price
+              </p>
+              <button disabled={isPending} type="submit">
+                {isPending ? "กำลัง import" : "Import Assets"}
+              </button>
+            </form>
             {renderRecords(
               modules.budgets.map((budget) => ({
                 id: budget.id,
@@ -1534,6 +1594,10 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
                 />
               </label>
               <label>
+                Asset Acc
+                <input value={form.assetAcc} onChange={(event) => setField("assetAcc", event.target.value)} />
+              </label>
+              <label>
                 ชื่อ
                 <input value={form.name} onChange={(event) => setField("name", event.target.value)} required />
               </label>
@@ -1600,6 +1664,10 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
                   onChange={(event) => setField("purchasePrice", event.target.value)}
                 />
               </label>
+              <label>
+                windows key
+                <input value={form.windowsKey} onChange={(event) => setField("windowsKey", event.target.value)} />
+              </label>
               <label className="span2">
                 หมายเหตุ
                 <textarea value={form.notes} onChange={(event) => setField("notes", event.target.value)} />
@@ -1646,6 +1714,7 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
                           {asset.assetTag}
                           {asset.serialNumber ? ` · SN ${asset.serialNumber}` : ""}
                         </span>
+                        <span>{asset.assetAcc ? `Asset Acc ${asset.assetAcc}` : ""}</span>
                         <span>
                           {[asset.manufacturer, asset.model].filter(Boolean).join(" ") || "-"}
                         </span>
