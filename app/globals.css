@@ -692,6 +692,50 @@ h1 {
   align-items: start;
 }
 
+.wideModuleGrid {
+  grid-template-columns: minmax(360px, 0.95fr) minmax(420px, 1.05fr);
+}
+
+.onboardingForm {
+  align-content: start;
+}
+
+.checkGroup {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #fbfcff;
+}
+
+.checkGroup strong {
+  font-size: 14px;
+}
+
+.checkGroup div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.checkItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.checkItem input {
+  width: auto;
+  min-height: auto;
+}
+
+.requestCard {
+  grid-template-columns: 1fr;
+}
+
 .masterDataGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(240px, 1fr));
@@ -1032,6 +1076,10 @@ th {
     grid-template-columns: 1fr;
   }
 
+  .wideModuleGrid {
+    grid-template-columns: 1fr;
+  }
+
   .masterDataGrid {
     grid-template-columns: 1fr;
   }
@@ -1061,6 +1109,10 @@ th {
   .budgetMetrics,
   .filterGrid,
   .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .checkGroup div {
     grid-template-columns: 1fr;
   }
 

@@ -85,7 +85,21 @@ type AppData = {
     }>;
     supportedAssetTypes: string[];
   };
-  hrRequests: Array<{ id: string; employeeName: string; department: string | null; status: string; createdAt: string }>;
+  hrRequests: Array<{
+    id: string;
+    employeeCode: string | null;
+    employeeName: string;
+    position: string | null;
+    department: string | null;
+    branch: string | null;
+    managerName: string | null;
+    employmentType: string | null;
+    startDate: string | null;
+    requestedItems: string | null;
+    systemsNeeded: string | null;
+    status: string;
+    createdAt: string;
+  }>;
   movements: Array<{ id: string; type: string; assetName: string | null; toHolder: string | null; movedAt: string }>;
 };
 
@@ -712,6 +726,151 @@ function MasterDataPage({ data, onRefresh }: { data: AppData; onRefresh: (data: 
     </section>
   );
 }
+
+const departmentOptions = ["IT", "HR", "Accounting", "Sales", "Marketing", "Warehouse", "Management", "Operation"];
+const employmentTypeOptions = ["พนักงานประจำ", "ทดลองงาน", "สัญญาจ้าง", "พาร์ทไทม์", "Intern"];
+const requestedDeviceOptions = ["Notebook", "PC", "Mini PC", "Monitor", "Mouse", "Keyboard", "Headset", "Mobile Phone"];
+const systemAccessOptions = ["Email", "Microsoft 365", "VPN", "Shared Folder", "Wi-Fi", "Printer Access", "SAP B1", "CRM"];
+
+const hrStatusLabels: Record<string, string> = {
+  DRAFT: "Draft",
+  SUBMITTED: "ส่งคำขอแล้ว",
+  RECEIVED_BY_IT: "IT รับเรื่องแล้ว",
+  PREPARING: "กำลังเตรียม",
+  WAITING_APPROVAL: "รออนุมัติ",
+  READY_TO_DELIVER: "พร้อมส่งมอบ",
+  DELIVERED: "ส่งมอบแล้ว",
+  COMPLETED: "เสร็จสิ้น",
+  CANCELLED: "ยกเลิก"
+};
+
+function selectedCheckboxValues(form: FormData, name: string) {
+  return form.getAll(name).map(String).filter(Boolean).join(", ");
+}
+
+function NewEmployeeRequestPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppData) => void }) {
+  const [message, setMessage] = useState("");
+
+  async function createRequest(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage("");
+    const form = new FormData(event.currentTarget);
+    const response = await fetch("/api/modules", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        module: "hrRequest",
+        type: "ONBOARDING",
+        employeeCode: form.get("employeeCode"),
+        employeeName: form.get("employeeName"),
+        position: form.get("position"),
+        department: form.get("department"),
+        branch: form.get("branch"),
+        managerName: form.get("managerName"),
+        employmentType: form.get("employmentType"),
+        startDate: form.get("startDate"),
+        requestedItems: selectedCheckboxValues(form, "requestedItems"),
+        systemsNeeded: selectedCheckboxValues(form, "systemsNeeded"),
+        status: "SUBMITTED",
+        owner: form.get("owner"),
+        notes: form.get("notes")
+      })
+    });
+
+    if (!response.ok) {
+      setMessage("สร้างคำขอไม่สำเร็จ กรุณาตรวจข้อมูลอีกครั้ง");
+      return;
+    }
+
+    const appResponse = await fetch("/api/app");
+    onRefresh(await appResponse.json());
+    event.currentTarget.reset();
+    setMessage("ส่งคำขอพนักงานใหม่สำเร็จ");
+  }
+
+  const onboardingRequests = data.hrRequests.filter((request) => request.status !== "CANCELLED");
+
+  return (
+    <section className="moduleGrid wideModuleGrid">
+      <form className="panel form onboardingForm" onSubmit={createRequest}>
+        <div className="panelHeader">
+          <h2>New Employee Request</h2>
+          <p>HR แจ้งพนักงานใหม่ เพื่อให้ IT เตรียมอุปกรณ์และ Account ล่วงหน้า</p>
+        </div>
+        <div className="formGrid">
+          <label>รหัสพนักงาน<input name="employeeCode" placeholder="EMP001" /></label>
+          <label>ชื่อพนักงาน<input name="employeeName" required placeholder="ชื่อ - นามสกุล" /></label>
+          <label>ตำแหน่ง<input name="position" placeholder="IT Support" /></label>
+          <label>แผนก
+            <select name="department" defaultValue="">
+              <option value="">เลือกแผนก</option>
+              {departmentOptions.map((department) => <option key={department} value={department}>{department}</option>)}
+            </select>
+          </label>
+          <label>Location
+            <select name="branch" defaultValue="">
+              <option value="">เลือก Location</option>
+              {data.masterData.branches.map((branch) => <option key={branch.id} value={branch.name}>{branch.name}</option>)}
+            </select>
+          </label>
+          <label>หัวหน้างาน<input name="managerName" placeholder="Manager / Approver" /></label>
+          <label>ประเภทการจ้าง
+            <select name="employmentType" defaultValue="">
+              <option value="">เลือกประเภท</option>
+              {employmentTypeOptions.map((type) => <option key={type} value={type}>{type}</option>)}
+            </select>
+          </label>
+          <label>วันเริ่มงาน<input name="startDate" type="date" /></label>
+          <label>ผู้รับผิดชอบ IT<input name="owner" placeholder="เช่น IT Support" /></label>
+        </div>
+
+        <div className="checkGroup">
+          <strong>อุปกรณ์ที่ต้องใช้</strong>
+          <div>
+            {requestedDeviceOptions.map((item) => (
+              <label key={item} className="checkItem"><input name="requestedItems" type="checkbox" value={item} /> {item}</label>
+            ))}
+          </div>
+        </div>
+
+        <div className="checkGroup">
+          <strong>ระบบ / สิทธิ์ที่ต้องเปิด</strong>
+          <div>
+            {systemAccessOptions.map((item) => (
+              <label key={item} className="checkItem"><input name="systemsNeeded" type="checkbox" value={item} /> {item}</label>
+            ))}
+          </div>
+        </div>
+
+        <label>หมายเหตุ<textarea name="notes" placeholder="รายละเอียดเพิ่มเติม เช่น โปรแกรมเฉพาะ แผนก หรือวันที่ต้องส่งมอบ" /></label>
+        {message ? <p className="notice">{message}</p> : null}
+        <button type="submit">ส่งคำขอให้ IT</button>
+      </form>
+
+      <section className="panel">
+        <div className="panelHeader">
+          <h2>รายการพนักงานใหม่</h2>
+          <p>ติดตามสถานะคำขอที่ HR ส่งให้ IT</p>
+        </div>
+        <div className="recordList">
+          {onboardingRequests.length ? onboardingRequests.map((request) => (
+            <div className="recordItem requestCard" key={request.id}>
+              <div>
+                <strong>{request.employeeName}</strong>
+                <span>{request.employeeCode ?? "-"} | {request.position ?? "-"} | {request.department ?? "-"}</span>
+              </div>
+              <span>{request.branch ?? "-"}</span>
+              <span>เริ่มงาน: {request.startDate ? new Date(request.startDate).toLocaleDateString("th-TH") : "-"}</span>
+              <span>อุปกรณ์: {request.requestedItems || "-"}</span>
+              <span>ระบบ: {request.systemsNeeded || "-"}</span>
+              <span className="badge">{hrStatusLabels[request.status] ?? request.status}</span>
+            </div>
+          )) : <p className="empty">ยังไม่มีคำขอพนักงานใหม่</p>}
+        </div>
+      </section>
+    </section>
+  );
+}
 function UsersPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppData) => void }) {
   const [message, setMessage] = useState("");
 
@@ -834,18 +993,7 @@ export default function ItsmConsole() {
       <section className="page">
         {activeMenu === "dashboard" ? <Dashboard data={data} /> : null}
         {activeMenu === "assets" ? <AssetsPage data={data} onRefresh={setData} /> : null}
-        {activeMenu === "newEmployee" ? (
-          <PlaceholderPanel title="New Employee Request" description="HR แจ้งพนักงานใหม่ และ IT ติดตามการเตรียมอุปกรณ์">
-            <div className="recordList">
-              {data.hrRequests.map((request) => (
-                <div className="recordItem" key={request.id}>
-                  <strong>{request.employeeName}</strong>
-                  <span>{request.department ?? "-"} | {request.status}</span>
-                </div>
-              ))}
-            </div>
-          </PlaceholderPanel>
-        ) : null}
+        {activeMenu === "newEmployee" ? <NewEmployeeRequestPage data={data} onRefresh={setData} /> : null}
         {activeMenu === "transfer" ? (
           <PlaceholderPanel title="Assign / Transfer" description="ส่งมอบหรือโอนย้ายอุปกรณ์">
             <div className="recordList">
