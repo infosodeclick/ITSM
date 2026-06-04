@@ -16,13 +16,6 @@ const masterDataSchema = z.discriminatedUnion("kind", [
     code: z.string().trim().min(2).max(30),
     name: z.string().trim().min(2).max(120),
     description: z.string().trim().max(240).optional().or(z.literal(""))
-  }),
-  z.object({
-    kind: z.literal("category"),
-    code: z.string().trim().min(2).max(30),
-    name: z.string().trim().min(2).max(120),
-    prefix: z.string().trim().min(2).max(10),
-    description: z.string().trim().max(240).optional().or(z.literal(""))
   })
 ]);
 
@@ -57,19 +50,6 @@ export async function POST(request: Request) {
       where: { code: parsed.data.code },
       update: { name: parsed.data.name, description: cleanText(parsed.data.description) },
       create: { code: parsed.data.code, name: parsed.data.name, description: cleanText(parsed.data.description) }
-    });
-  }
-
-  if (parsed.data.kind === "category") {
-    record = await prisma.assetCategory.upsert({
-      where: { code: parsed.data.code },
-      update: { name: parsed.data.name, prefix: parsed.data.prefix, description: cleanText(parsed.data.description) },
-      create: {
-        code: parsed.data.code,
-        name: parsed.data.name,
-        prefix: parsed.data.prefix,
-        description: cleanText(parsed.data.description)
-      }
     });
   }
 

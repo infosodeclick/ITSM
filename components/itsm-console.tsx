@@ -76,7 +76,6 @@ type AppData = {
   masterData: {
     branches: Array<{ id: string; code: string; name: string }>;
     brands: Array<{ id: string; code: string; name: string }>;
-    categories: Array<{ id: string; code: string; name: string; prefix: string }>;
     assetTypes: string[];
   };
   hrRequests: Array<{ id: string; employeeName: string; department: string | null; status: string; createdAt: string }>;
@@ -568,7 +567,7 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
 function MasterDataPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppData) => void }) {
   const [message, setMessage] = useState("");
 
-  async function submitMasterData(event: FormEvent<HTMLFormElement>, kind: "location" | "brand" | "category") {
+  async function submitMasterData(event: FormEvent<HTMLFormElement>, kind: "location" | "brand") {
     event.preventDefault();
     setMessage("");
     const form = new FormData(event.currentTarget);
@@ -601,7 +600,7 @@ function MasterDataPage({ data, onRefresh }: { data: AppData; onRefresh: (data: 
         <div>
           <p className="eyebrow">Master Data</p>
           <h1>ข้อมูลหลักสำหรับ dropdown</h1>
-          <p>เพิ่ม Location, ประเภทอุปกรณ์ และ Brand เพื่อใช้ตอนเพิ่มอุปกรณ์ ลดการพิมพ์ผิด</p>
+          <p>เพิ่ม Location และ Brand เพื่อใช้ตอนเพิ่มอุปกรณ์ ลดการพิมพ์ผิด</p>
         </div>
       </div>
       {message ? <p className="notice">{message}</p> : null}
@@ -615,18 +614,6 @@ function MasterDataPage({ data, onRefresh }: { data: AppData; onRefresh: (data: 
           <label>Name<input name="name" required placeholder="Head Office" /></label>
           <label>Description<textarea name="description" /></label>
           <button type="submit">บันทึก Location</button>
-        </form>
-
-        <form className="panel form" onSubmit={(event) => submitMasterData(event, "category")}>
-          <div className="panelHeader">
-            <h2>ประเภทอุปกรณ์</h2>
-            <p>หมวดหมู่สำหรับแยกอุปกรณ์และรายงาน</p>
-          </div>
-          <label>Code<input name="code" required placeholder="NOTEBOOK" /></label>
-          <label>Name<input name="name" required placeholder="Notebook" /></label>
-          <label>Prefix<input name="prefix" required placeholder="NB" /></label>
-          <label>Description<textarea name="description" /></label>
-          <button type="submit">บันทึกประเภท</button>
         </form>
 
         <form className="panel form" onSubmit={(event) => submitMasterData(event, "brand")}>
