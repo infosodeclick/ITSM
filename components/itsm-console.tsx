@@ -399,8 +399,6 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
         name: form.get("name"),
         assetAcc: form.get("assetAcc"),
         serialNumber: form.get("serialNumber"),
-        assignedTo: form.get("assignedTo"),
-        userPosition: form.get("userPosition"),
         location: form.get("location"),
         purchaseDate: form.get("purchaseDate"),
         status: form.get("status"),
@@ -440,8 +438,6 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
           <label>Asset Name<input name="name" required placeholder="เช่น Lenovo ThinkPad E14" /></label>
           <label>AssetAcc<input name="assetAcc" /></label>
           <label>S/N<input name="serialNumber" /></label>
-          <label>User<input name="assignedTo" /></label>
-          <label>Position<input name="userPosition" /></label>
           <label>Location<input name="location" /></label>
           <label>Years<input name="purchaseDate" type="date" /></label>
           <label>Status
@@ -460,6 +456,7 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
         </form>
       ) : null}
       {message ? <p className="notice assetInlineNotice">{message}</p> : null}
+      {data.assets.length > 0 ? (
       <div className="tableWrap">
         <table className="assetReportTable">
           <thead>
@@ -500,6 +497,9 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
           </tbody>
         </table>
       </div>
+      ) : showForm ? (
+        <p className="empty">ยังไม่มีรายการ Asset หลังบันทึกข้อมูลแรก ตารางจะแสดงที่นี่</p>
+      ) : null}
     </section>
   );
 }
