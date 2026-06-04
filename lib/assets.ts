@@ -2,20 +2,22 @@ import { AssetStatus, AssetType, Prisma } from "@prisma/client";
 import { z } from "zod";
 
 const optionalText = z
-  .string()
-  .trim()
+  .union([z.string(), z.null()])
   .optional()
-  .transform((value) => (value ? value : null));
+  .transform((value) => {
+    if (typeof value !== "string") return null;
+    const trimmed = value.trim();
+    return trimmed ? trimmed : null;
+  });
 
 const optionalDate = z
-  .string()
-  .trim()
+  .union([z.string(), z.null()])
   .optional()
-  .transform((value) => (value ? new Date(value) : null))
+  .transform((value) => (typeof value === "string" && value.trim() ? new Date(value.trim()) : null))
   .refine((value) => value === null || !Number.isNaN(value.getTime()), "Invalid date");
 
 const optionalDecimal = z
-  .union([z.string(), z.number()])
+  .union([z.string(), z.number(), z.null()])
   .optional()
   .transform((value, context) => {
     if (value === undefined || value === null || String(value).trim() === "") return null;
