@@ -20,6 +20,7 @@ export type ImportedAssetRow = {
 const statusAliases: Record<string, AssetStatus> = {
   stock: AssetStatus.IN_STOCK,
   "in stock": AssetStatus.IN_STOCK,
+  stored: AssetStatus.IN_STOCK,
   "ready to use": AssetStatus.READY_TO_USE,
   ready: AssetStatus.READY_TO_USE,
   assigned: AssetStatus.ASSIGNED,
@@ -33,6 +34,7 @@ const statusAliases: Record<string, AssetStatus> = {
   spare: AssetStatus.SPARE,
   retired: AssetStatus.RETIRED,
   disposed: AssetStatus.DISPOSED,
+  sold: AssetStatus.DISPOSED,
   lost: AssetStatus.LOST,
   "pending disposal": AssetStatus.PENDING_DISPOSAL,
   "สต็อก": AssetStatus.IN_STOCK,
@@ -70,7 +72,21 @@ function normalizeHeader(value: string) {
 
 function clean(value: string | undefined) {
   const text = value?.trim();
-  return text ? text : null;
+  if (!text) return null;
+  if (["-", "n/a", "na", "no data", "ไม่มีข้อมูล"].includes(text.toLowerCase())) return null;
+  if (text === "ไม่มีข้อมูล") return null;
+  return text;
+}
+
+function cleanPrice(value: string | null) {
+  if (!value) return null;
+  const normalized = value.replaceAll(",", "").trim();
+  return normalized && !Number.isNaN(Number(normalized)) ? normalized : null;
+}
+
+function firstValue(...values: Array<string | null>) {
+  const value = values.find(Boolean);
+  return value ?? null;
 }
 
 function parseDelimited(text: string) {
@@ -160,9 +176,17 @@ export function parseAssetRows(rows: unknown[][]) {
   if (rows.length < 2) return [];
 
   const headers = rows[0].map((value) => normalizeHeader(String(value ?? "")));
-  return rows.slice(1).flatMap((cells) => {
+  return rows.slice(1).flatMap((cells, rowIndex) => {
     const row = Object.fromEntries(headers.map((header, index) => [header, String(cells[index] ?? "")]));
-    const assetName = valueFrom(row, ["Asset", "Asset Name", "Name", "อุปกรณ์", "ทรัพย์สิน"]);
+    const assetName = firstValue(
+      valueFrom(row, ["Asset", "Asset Name", "Name", "อุปกรณ์", "ทรัพย์สิน"]),
+      valueFrom(row, ["Asset Acc", "Asset Account", "Asset Accounting", "บัญชีทรัพย์สิน"]),
+      valueFrom(row, ["S/N", "SN", "Serial", "Serial Number", "เลขซีเรียล"]),
+      [valueFrom(row, ["Brand", "Manufacturer", "ยี่ห้อ", "ผู้ผลิต"]), valueFrom(row, ["Model", "รุ่น"])].filter(Boolean).join(" "),
+      valueFrom(row, ["User", "Assigned To", "ผู้ใช้งาน", "ผู้ถือครอง"]),
+      valueFrom(row, ["Location", "Branch", "สถานที่", "สาขา"]),
+      `Imported Asset ${rowIndex + 2}`
+    );
     if (!assetName) return [];
 
     return [
@@ -175,7 +199,7 @@ export function parseAssetRows(rows: unknown[][]) {
         name: assetName,
         notes: valueFrom(row, ["Notation", "Note", "Notes", "Remark", "หมายเหตุ"]),
         purchaseDate: purchaseDateFromYear(valueFrom(row, ["Years", "Year", "ปี", "ปีที่ซื้อ"])),
-        purchasePrice: valueFrom(row, ["Price", "Purchase Price", "ราคา"]),
+        purchasePrice: cleanPrice(valueFrom(row, ["Price", "Purchase Price", "ราคา"])),
         serialNumber: valueFrom(row, ["S/N", "SN", "Serial", "Serial Number", "เลขซีเรียล"]),
         status: statusFrom(valueFrom(row, ["Status", "สถานะ"])),
         type: typeFrom(assetName),
