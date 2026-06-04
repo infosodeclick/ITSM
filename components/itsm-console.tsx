@@ -161,6 +161,10 @@ function statusLabel(status: string) {
   return assetStatusOptions.find(([value]) => value === status)?.[1] ?? status;
 }
 
+function assetTypeLabel(type: string) {
+  return assetTypeOptions.find(([value]) => value === type)?.[1] ?? type;
+}
+
 function LoginPanel({ onLogin }: { onLogin: (data: AppData) => void }) {
   const [username, setUsername] = useState("administrator");
   const [password, setPassword] = useState("");
@@ -418,6 +422,28 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
   const [showForm, setShowForm] = useState(false);
   const [message, setMessage] = useState("");
   const [selectedType, setSelectedType] = useState("DESKTOP");
+  const [selectedBrand, setSelectedBrand] = useState("all");
+
+  const assetsBySelectedType = useMemo(
+    () => data.assets.filter((asset) => asset.type === selectedType),
+    [data.assets, selectedType]
+  );
+
+  const brandOptionsForType = useMemo(() => {
+    const brands = new Map<string, string>();
+    assetsBySelectedType.forEach((asset) => {
+      const name = asset.brand?.name ?? asset.manufacturer;
+      if (name) brands.set(name, name);
+    });
+    return Array.from(brands.values()).sort((a, b) => a.localeCompare(b));
+  }, [assetsBySelectedType]);
+
+  const filteredAssets = useMemo(() => {
+    return assetsBySelectedType.filter((asset) => {
+      const brandName = asset.brand?.name ?? asset.manufacturer ?? "";
+      return selectedBrand === "all" || brandName === selectedBrand;
+    });
+  }, [assetsBySelectedType, selectedBrand]);
 
   const nextAssetNo = useMemo(() => {
     const prefix = assetTypePrefixes[selectedType] ?? "OTH";
@@ -480,7 +506,7 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
       {showForm ? (
         <form className="assetCreateForm" onSubmit={createAsset}>
           <label>ประเภท
-            <select value={selectedType} onChange={(event) => setSelectedType(event.target.value)}>
+            <select value={selectedType} onChange={(event) => { setSelectedType(event.target.value); setSelectedBrand("all"); }}>
               {assetTypeOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
           </label>
@@ -516,7 +542,24 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
         </form>
       ) : null}
       {message ? <p className="notice assetInlineNotice">{message}</p> : null}
-      {data.assets.length > 0 ? (
+      <div className="assetFilterBar">
+        <label>ประเภท
+          <select value={selectedType} onChange={(event) => { setSelectedType(event.target.value); setSelectedBrand("all"); }}>
+            {assetTypeOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select>
+        </label>
+        <label>Brand
+          <select value={selectedBrand} onChange={(event) => setSelectedBrand(event.target.value)} disabled={brandOptionsForType.length === 0}>
+            <option value="all">ทั้งหมดใน {assetTypeLabel(selectedType)}</option>
+            {brandOptionsForType.map((brand) => <option key={brand} value={brand}>{brand}</option>)}
+          </select>
+        </label>
+        <div className="assetFilterSummary">
+          <span>{assetTypeLabel(selectedType)}</span>
+          <strong>{filteredAssets.length} รายการ</strong>
+        </div>
+      </div>
+      {filteredAssets.length > 0 ? (
       <div className="tableWrap">
         <table className="assetReportTable">
           <thead>
@@ -537,7 +580,7 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
             </tr>
           </thead>
           <tbody>
-            {data.assets.map((asset, index) => (
+            {filteredAssets.map((asset, index) => (
               <tr key={asset.id}>
                 <td>{index + 1}</td>
                 <td><strong>{asset.assetTag}</strong><br /><span className="small">{asset.name}</span></td>
@@ -557,9 +600,9 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
           </tbody>
         </table>
       </div>
-      ) : showForm ? (
-        <p className="empty">ยังไม่มีรายการ Asset หลังบันทึกข้อมูลแรก ตารางจะแสดงที่นี่</p>
-      ) : null}
+      ) : (
+        <p className="empty">ยังไม่มีรายการ {assetTypeLabel(selectedType)}{selectedBrand === "all" ? "" : ` ของ ${selectedBrand}`}</p>
+      )}
     </section>
   );
 }

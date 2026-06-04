@@ -585,6 +585,29 @@ h1 {
   margin: 12px 16px 0;
 }
 
+.assetFilterBar {
+  display: grid;
+  grid-template-columns: minmax(160px, 240px) minmax(160px, 240px) minmax(150px, 1fr);
+  gap: 12px;
+  align-items: end;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  background: #fbfcff;
+}
+
+.assetFilterSummary {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.assetFilterSummary strong {
+  color: var(--text);
+  font-size: 18px;
+}
+
 .assetReportTable {
   min-width: 1320px;
 }
@@ -1085,6 +1108,14 @@ th {
   .assetPanelHeader {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .assetFilterBar {
+    grid-template-columns: 1fr;
+  }
+
+  .assetFilterSummary {
+    justify-items: start;
   }
 
   .toolbar input {
