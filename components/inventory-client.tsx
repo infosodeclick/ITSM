@@ -851,6 +851,55 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
 
     return (
       <section className="dashboardStack" aria-label="Dashboard overview">
+        <section className="dashboardTopGrid">
+          <div className="panel modulePanel budgetHero">
+            <div className="panelHeader">
+              <h2>งบประมาณทรัพย์สิน IT</h2>
+              <p>สรุปมูลค่าจาก Price ของ asset ตาม filter ปัจจุบัน</p>
+            </div>
+            <div className="budgetMetrics">
+              <div>
+                <span>มูลค่ารวม</span>
+                <strong>{formatCurrency(totalAssetValue)}</strong>
+              </div>
+              <div>
+                <span>รายการที่มีราคา</span>
+                <strong>{pricedAssets}</strong>
+              </div>
+              <div>
+                <span>ปีที่ใช้งบสูงสุด</span>
+                <strong>{topBudgetYear ? topBudgetYear.label : "-"}</strong>
+                <small>{topBudgetYear ? formatCurrency(topBudgetYear.totalCost) : ""}</small>
+              </div>
+            </div>
+            <div className="budgetBars">
+              {budgetYearRows.length === 0 ? <div className="empty">ยังไม่มีข้อมูลราคา</div> : null}
+              {budgetYearRows.slice(0, 8).map((row) => (
+                <div className="budgetBarRow" key={row.label}>
+                  <div className="barLabel">
+                    <span>{row.label}</span>
+                    <strong>{formatCurrency(row.totalCost)}</strong>
+                  </div>
+                  <div className="barTrack" aria-hidden="true">
+                    <div className="barFill budgetFill" style={{ width: `${Math.max(5, (row.totalCost / budgetChartMax) * 100)}%` }} />
+                  </div>
+                  <small>
+                    {row.assets} เครื่อง / มีราคา {row.pricedAssets} เครื่อง
+                  </small>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="panel modulePanel chartHighlight">
+            <div className="panelHeader">
+              <h2>สถานะการใช้งาน</h2>
+              <p>ภาพรวมสถานะตาม filter ปัจจุบัน</p>
+            </div>
+            {renderBarChart(statusChartRows, chartMax)}
+          </div>
+        </section>
+
         <section className="panel modulePanel">
           <div className="panelHeader">
             <h2>Dashboard Filters</h2>
@@ -915,54 +964,6 @@ export default function InventoryClient({ initialAssets, stats, initialModules }
             <button className="secondary filterReset" type="button" onClick={() => setDashboardFilters(defaultDashboardFilters)}>
               ล้าง Filter
             </button>
-          </div>
-        </section>
-        <section className="dashboardTopGrid">
-          <div className="panel modulePanel budgetHero">
-            <div className="panelHeader">
-              <h2>งบประมาณทรัพย์สิน IT</h2>
-              <p>สรุปมูลค่าจาก Price ของ asset ตาม filter ปัจจุบัน</p>
-            </div>
-            <div className="budgetMetrics">
-              <div>
-                <span>มูลค่ารวม</span>
-                <strong>{formatCurrency(totalAssetValue)}</strong>
-              </div>
-              <div>
-                <span>รายการที่มีราคา</span>
-                <strong>{pricedAssets}</strong>
-              </div>
-              <div>
-                <span>ปีที่ใช้งบสูงสุด</span>
-                <strong>{topBudgetYear ? topBudgetYear.label : "-"}</strong>
-                <small>{topBudgetYear ? formatCurrency(topBudgetYear.totalCost) : ""}</small>
-              </div>
-            </div>
-            <div className="budgetBars">
-              {budgetYearRows.length === 0 ? <div className="empty">ยังไม่มีข้อมูลราคา</div> : null}
-              {budgetYearRows.slice(0, 8).map((row) => (
-                <div className="budgetBarRow" key={row.label}>
-                  <div className="barLabel">
-                    <span>{row.label}</span>
-                    <strong>{formatCurrency(row.totalCost)}</strong>
-                  </div>
-                  <div className="barTrack" aria-hidden="true">
-                    <div className="barFill budgetFill" style={{ width: `${Math.max(5, (row.totalCost / budgetChartMax) * 100)}%` }} />
-                  </div>
-                  <small>
-                    {row.assets} เครื่อง / มีราคา {row.pricedAssets} เครื่อง
-                  </small>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="panel modulePanel chartHighlight">
-            <div className="panelHeader">
-              <h2>สถานะการใช้งาน</h2>
-              <p>ภาพรวมสถานะตาม filter ปัจจุบัน</p>
-            </div>
-            {renderBarChart(statusChartRows, chartMax)}
           </div>
         </section>
 
