@@ -744,14 +744,73 @@ h1 {
   grid-template-columns: 1fr;
 }
 
+.hrWorkflowPanel {
+  overflow: hidden;
+}
+
+.hrWorkflowHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.hrViewSwitch {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  background: #fbfcff;
+}
+
+.hrViewSwitch button {
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  color: var(--text);
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.hrViewSwitch button.active {
+  border-color: rgba(0, 196, 204, 0.55);
+  background: linear-gradient(135deg, rgba(0, 196, 204, 0.12), rgba(124, 58, 237, 0.12));
+}
+
+.hrViewSwitch button span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.hrWorkflowTable {
+  min-width: 1180px;
+}
+
+.emptyCell {
+  height: 96px;
+  color: var(--muted);
+  text-align: center;
+  vertical-align: middle;
+}
+
 .offboardingInlineForm {
   display: grid;
   gap: 10px;
-  margin-top: 8px;
+  margin: 16px;
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 12px;
   background: #ffffff;
+}
+
+.offboardingInlineForm p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .masterDataGrid {
@@ -1096,6 +1155,15 @@ th {
 
   .wideModuleGrid {
     grid-template-columns: 1fr;
+  }
+
+  .hrWorkflowHeader,
+  .hrViewSwitch {
+    grid-template-columns: 1fr;
+  }
+
+  .hrWorkflowHeader {
+    display: grid;
   }
 
   .masterDataGrid {

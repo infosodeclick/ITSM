@@ -99,9 +99,11 @@ type AppData = {
     managerName: string | null;
     employmentType: string | null;
     startDate: string | null;
+    lastWorkingDate: string | null;
     requestedItems: string | null;
     systemsNeeded: string | null;
     shipNotebookToBranch: boolean;
+    type: string;
     status: string;
     createdAt: string;
   }>;
@@ -753,10 +755,31 @@ function selectedCheckboxValues(form: FormData, name: string) {
   return form.getAll(name).map(String).filter(Boolean).join(", ");
 }
 
+type HrViewKey = "current" | "onboarding" | "offboarding";
+
+const hrViews: Array<{ key: HrViewKey; label: string; description: string }> = [
+  {
+    key: "current",
+    label: "ทะเบียนพนักงานปัจจุบัน",
+    description: "พนักงานที่ HR แจ้งเริ่มงานแล้ว และยังไม่มีคำขอพ้นสภาพ"
+  },
+  {
+    key: "onboarding",
+    label: "คำขอรับพนักงานใหม่",
+    description: "คำขอเริ่มงานที่รอ IT เตรียมอุปกรณ์และสิทธิ์ระบบ"
+  },
+  {
+    key: "offboarding",
+    label: "คำขอพ้นสภาพพนักงาน",
+    description: "รายการที่ IT ต้องรับคืนอุปกรณ์ สำรองข้อมูล และปิดสิทธิ์ระบบ"
+  }
+];
+
 function NewEmployeeRequestPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppData) => void }) {
   const [message, setMessage] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [offboardingFor, setOffboardingFor] = useState<string | null>(null);
+  const [activeHrView, setActiveHrView] = useState<HrViewKey>("current");
 
   async function createRequest(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -840,8 +863,14 @@ function NewEmployeeRequestPage({ data, onRefresh }: { data: AppData; onRefresh:
     setMessage("ส่งรายการลาออกให้ IT สำเร็จ");
   }
 
-  const onboardingRequests = data.hrRequests.filter((request) => request.status !== "CANCELLED" && !request.systemsNeeded?.includes("ปิด AD"));
-  const offboardingRequests = data.hrRequests.filter((request) => request.systemsNeeded?.includes("ปิด AD"));
+  const onboardingRequests = data.hrRequests.filter((request) => request.type === "ONBOARDING" && request.status !== "CANCELLED");
+  const offboardingRequests = data.hrRequests.filter((request) => request.type === "OFFBOARDING" && request.status !== "CANCELLED");
+  const offboardingEmployeeKeys = new Set(offboardingRequests.map((request) => request.employeeCode || request.employeeName));
+  const currentEmployees = onboardingRequests.filter((request) => !offboardingEmployeeKeys.has(request.employeeCode || request.employeeName));
+  const activeView = hrViews.find((view) => view.key === activeHrView) ?? hrViews[0];
+  const activeRows =
+    activeHrView === "current" ? currentEmployees : activeHrView === "onboarding" ? onboardingRequests : offboardingRequests;
+  const selectedOffboardingRequest = onboardingRequests.find((request) => request.id === offboardingFor);
 
   return (
     <section className="dashboardPage">
@@ -913,61 +942,111 @@ function NewEmployeeRequestPage({ data, onRefresh }: { data: AppData; onRefresh:
       </form>
       ) : null}
 
-      <section className="moduleGrid wideModuleGrid">
-      <section className="panel">
-        <div className="panelHeader">
-          <h2>รายการพนักงานใหม่</h2>
-          <p>ติดตามสถานะคำขอที่ HR ส่งให้ IT</p>
+      <section className="panel hrWorkflowPanel">
+        <div className="panelHeader hrWorkflowHeader">
+          <div>
+            <h2>{activeView.label}</h2>
+            <p>{activeView.description}</p>
+          </div>
+          <span className="badge">{activeRows.length} รายการ</span>
         </div>
-        <div className="recordList">
-          {onboardingRequests.length ? onboardingRequests.map((request) => (
-            <div className="recordItem requestCard" key={request.id}>
-              <div>
-                <strong>{request.employeeNameTh ?? request.employeeName}</strong>
-                <span>{request.employeeCode ?? "-"} | {request.position ?? "-"} | {request.department ?? "-"}</span>
-              </div>
-              <span>Eng: {request.employeeNameEn ?? "-"}</span>
-              <span>ชื่อเล่น: {request.nickname ?? "-"} | โทร: {request.phone ?? "-"}</span>
-              <span>{request.branch ?? "-"}</span>
-              <span>เริ่มงาน: {request.startDate ? new Date(request.startDate).toLocaleDateString("th-TH") : "-"}</span>
-              <span>อุปกรณ์: {request.requestedItems || "-"}</span>
-              <span>ระบบ: {request.systemsNeeded || "-"}</span>
-              <span>ส่ง Notebook ไปสาขา: {request.shipNotebookToBranch ? "ใช่" : "ไม่ใช่"}</span>
-              <span className="badge">{hrStatusLabels[request.status] ?? request.status}</span>
-              <div className="actions">
-                <button className="secondary" type="button" onClick={() => setOffboardingFor(offboardingFor === request.id ? null : request.id)}>
-                  แจ้งลาออก
-                </button>
-              </div>
-              {offboardingFor === request.id ? (
-                <form className="offboardingInlineForm" onSubmit={(event) => createOffboardingRequest(event, request)}>
-                  <label>วันทำงานวันสุดท้าย<input name="lastWorkingDate" type="date" /></label>
-                  <label>ผู้รับผิดชอบ IT<input name="owner" placeholder="เช่น IT Support" /></label>
-                  <label>หมายเหตุ<textarea name="notes" placeholder="รายละเอียดการลาออก / นัดรับคืนอุปกรณ์" /></label>
-                  <button type="submit">ส่งรายการลาออกให้ IT</button>
-                </form>
-              ) : null}
+        <div className="hrViewSwitch" aria-label="เลือกมุมมองข้อมูล HR">
+          {hrViews.map((view) => {
+            const count =
+              view.key === "current" ? currentEmployees.length : view.key === "onboarding" ? onboardingRequests.length : offboardingRequests.length;
+            return (
+              <button
+                key={view.key}
+                type="button"
+                className={activeHrView === view.key ? "active" : ""}
+                onClick={() => {
+                  setActiveHrView(view.key);
+                  setOffboardingFor(null);
+                }}
+              >
+                <strong>{view.label}</strong>
+                <span>{count} รายการ</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="tableWrap">
+          <table className="hrWorkflowTable">
+            <thead>
+              <tr>
+                <th>Staff ID</th>
+                <th>ชื่อพนักงาน</th>
+                <th>ตำแหน่ง / แผนก</th>
+                <th>Location</th>
+                <th>{activeHrView === "offboarding" ? "วันทำงานสุดท้าย" : "Start Date"}</th>
+                <th>อุปกรณ์</th>
+                <th>ระบบ / สิทธิ์</th>
+                <th>สถานะ</th>
+                {activeHrView !== "offboarding" ? <th>จัดการ</th> : null}
+              </tr>
+            </thead>
+            <tbody>
+              {activeRows.length ? (
+                activeRows.map((request) => (
+                  <tr key={request.id}>
+                    <td>{request.employeeCode ?? "-"}</td>
+                    <td>
+                      <div className="assetName">
+                        <strong>{request.employeeNameTh ?? request.employeeName}</strong>
+                        <span>{request.employeeNameEn ?? "-"}</span>
+                        <span>ชื่อเล่น: {request.nickname ?? "-"} | โทร: {request.phone ?? "-"}</span>
+                      </div>
+                    </td>
+                    <td>{request.position ?? "-"}<br /><span className="small">{request.department ?? "-"}</span></td>
+                    <td>{request.branch ?? "-"}</td>
+                    <td>
+                      {activeHrView === "offboarding"
+                        ? request.lastWorkingDate
+                          ? new Date(request.lastWorkingDate).toLocaleDateString("th-TH")
+                          : "-"
+                        : request.startDate
+                          ? new Date(request.startDate).toLocaleDateString("th-TH")
+                          : "-"}
+                    </td>
+                    <td>
+                      {request.requestedItems || "-"}
+                      {request.shipNotebookToBranch ? <span className="small">ส่ง Notebook ไปสาขา</span> : null}
+                    </td>
+                    <td>{request.systemsNeeded || "-"}</td>
+                    <td><span className="badge">{hrStatusLabels[request.status] ?? request.status}</span></td>
+                    {activeHrView !== "offboarding" ? (
+                      <td>
+                        <button className="secondary" type="button" onClick={() => setOffboardingFor(offboardingFor === request.id ? null : request.id)}>
+                          แจ้งพ้นสภาพ
+                        </button>
+                      </td>
+                    ) : null}
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={activeHrView === "offboarding" ? 8 : 9} className="emptyCell">
+                    ยังไม่มีข้อมูลในมุมมองนี้
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {selectedOffboardingRequest ? (
+          <form className="offboardingInlineForm" onSubmit={(event) => createOffboardingRequest(event, selectedOffboardingRequest)}>
+            <div>
+              <strong>แจ้งพ้นสภาพ: {selectedOffboardingRequest.employeeNameTh ?? selectedOffboardingRequest.employeeName}</strong>
+              <p>สร้างคำขอให้ IT รับคืนอุปกรณ์ สำรองข้อมูล และปิดสิทธิ์ระบบ</p>
             </div>
-          )) : <p className="empty">ยังไม่มีคำขอพนักงานใหม่</p>}
-        </div>
-      </section>
-      <section className="panel">
-        <div className="panelHeader">
-          <h2>รายการลาออก / IT ต้องดำเนินการ</h2>
-          <p>รับคืนอุปกรณ์ สำรองข้อมูล และปิดสิทธิ์ระบบ</p>
-        </div>
-        <div className="recordList">
-          {offboardingRequests.length ? offboardingRequests.map((request) => (
-            <div className="recordItem requestCard" key={request.id}>
-              <strong>{request.employeeNameTh ?? request.employeeName}</strong>
-              <span>{request.employeeCode ?? "-"} | {request.position ?? "-"} | {request.department ?? "-"}</span>
-              <span>{request.branch ?? "-"}</span>
-              <span>Checklist IT: {request.systemsNeeded}</span>
-              <span className="badge">{hrStatusLabels[request.status] ?? request.status}</span>
-            </div>
-          )) : <p className="empty">ยังไม่มีรายการลาออก</p>}
-        </div>
-      </section>
+            <label>วันทำงานวันสุดท้าย<input name="lastWorkingDate" type="date" /></label>
+            <label>ผู้รับผิดชอบ IT<input name="owner" placeholder="เช่น IT Support" /></label>
+            <label>หมายเหตุ<textarea name="notes" placeholder="รายละเอียดการลาออก / นัดรับคืนอุปกรณ์" /></label>
+            <button type="submit">ส่งคำขอพ้นสภาพให้ IT</button>
+          </form>
+        ) : null}
       </section>
     </section>
   );
