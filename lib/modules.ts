@@ -69,6 +69,10 @@ export const moduleCreateSchema = z.discriminatedUnion("module", [
     type: z.nativeEnum(HrRequestType),
     employeeCode: optionalText,
     employeeName: z.string().trim().min(2).max(120),
+    employeeNameEn: optionalText,
+    employeeNameTh: optionalText,
+    nickname: optionalText,
+    phone: optionalText,
     position: optionalText,
     department: optionalText,
     branch: optionalText,
@@ -78,6 +82,7 @@ export const moduleCreateSchema = z.discriminatedUnion("module", [
     lastWorkingDate: optionalDate,
     requestedItems: optionalText,
     systemsNeeded: optionalText,
+    shipNotebookToBranch: z.coerce.boolean().default(false),
     status: z.nativeEnum(HrRequestStatus).default(HrRequestStatus.SUBMITTED),
     owner: optionalText,
     notes: optionalText

@@ -89,6 +89,10 @@ type AppData = {
     id: string;
     employeeCode: string | null;
     employeeName: string;
+    employeeNameEn: string | null;
+    employeeNameTh: string | null;
+    nickname: string | null;
+    phone: string | null;
     position: string | null;
     department: string | null;
     branch: string | null;
@@ -97,6 +101,7 @@ type AppData = {
     startDate: string | null;
     requestedItems: string | null;
     systemsNeeded: string | null;
+    shipNotebookToBranch: boolean;
     status: string;
     createdAt: string;
   }>;
@@ -728,9 +733,8 @@ function MasterDataPage({ data, onRefresh }: { data: AppData; onRefresh: (data: 
 }
 
 const departmentOptions = ["IT", "HR", "Accounting", "Sales", "Marketing", "Warehouse", "Management", "Operation"];
-const employmentTypeOptions = ["พนักงานประจำ", "ทดลองงาน", "สัญญาจ้าง", "พาร์ทไทม์", "Intern"];
-const requestedDeviceOptions = ["Notebook", "PC", "Mini PC", "Monitor", "Mouse", "Keyboard", "Headset", "Mobile Phone"];
-const systemAccessOptions = ["Email", "Microsoft 365", "VPN", "Shared Folder", "Wi-Fi", "Printer Access", "SAP B1", "CRM"];
+const requestedDeviceOptions = ["Notebook", "PC", "Mobile Phone"];
+const systemAccessOptions = ["AD", "E-Mail", "E-memo/smartflow", "Ai CRM", "SAP B1"];
 
 const hrStatusLabels: Record<string, string> = {
   DRAFT: "Draft",
@@ -762,7 +766,11 @@ function NewEmployeeRequestPage({ data, onRefresh }: { data: AppData; onRefresh:
         module: "hrRequest",
         type: "ONBOARDING",
         employeeCode: form.get("employeeCode"),
-        employeeName: form.get("employeeName"),
+        employeeName: form.get("employeeNameTh") || form.get("employeeNameEn"),
+        employeeNameEn: form.get("employeeNameEn"),
+        employeeNameTh: form.get("employeeNameTh"),
+        nickname: form.get("nickname"),
+        phone: form.get("phone"),
         position: form.get("position"),
         department: form.get("department"),
         branch: form.get("branch"),
@@ -771,6 +779,7 @@ function NewEmployeeRequestPage({ data, onRefresh }: { data: AppData; onRefresh:
         startDate: form.get("startDate"),
         requestedItems: selectedCheckboxValues(form, "requestedItems"),
         systemsNeeded: selectedCheckboxValues(form, "systemsNeeded"),
+        shipNotebookToBranch: form.get("shipNotebookToBranch") === "on",
         status: "SUBMITTED",
         owner: form.get("owner"),
         notes: form.get("notes")
@@ -795,32 +804,28 @@ function NewEmployeeRequestPage({ data, onRefresh }: { data: AppData; onRefresh:
       <form className="panel form onboardingForm" onSubmit={createRequest}>
         <div className="panelHeader">
           <h2>New Employee Request</h2>
-          <p>HR แจ้งพนักงานใหม่ เพื่อให้ IT เตรียมอุปกรณ์และ Account ล่วงหน้า</p>
+          <p>HR แจ้งพนักงานใหม่ เพื่อให้ IT เตรียมอุปกรณ์และสิทธิ์ระบบล่วงหน้า</p>
         </div>
         <div className="formGrid">
-          <label>รหัสพนักงาน<input name="employeeCode" placeholder="EMP001" /></label>
-          <label>ชื่อพนักงาน<input name="employeeName" required placeholder="ชื่อ - นามสกุล" /></label>
-          <label>ตำแหน่ง<input name="position" placeholder="IT Support" /></label>
-          <label>แผนก
+          <label>Start Date<input name="startDate" type="date" /></label>
+          <label>Position<input name="position" placeholder="IT Support" /></label>
+          <label>Department
             <select name="department" defaultValue="">
               <option value="">เลือกแผนก</option>
               {departmentOptions.map((department) => <option key={department} value={department}>{department}</option>)}
             </select>
           </label>
+          <label>Staff ID<input name="employeeCode" placeholder="EMP001" /></label>
+          <label>ชื่อ-สกุล (Eng)<input name="employeeNameEn" required placeholder="Firstname Lastname" /></label>
+          <label>ชื่อ- นามสกุล(ไทย)<input name="employeeNameTh" required placeholder="ชื่อ - นามสกุล" /></label>
+          <label>ชื่อเล่น<input name="nickname" placeholder="ชื่อเล่น" /></label>
+          <label>เบอร์โทรศัพท์<input name="phone" inputMode="tel" placeholder="08x-xxx-xxxx" /></label>
           <label>Location
             <select name="branch" defaultValue="">
               <option value="">เลือก Location</option>
               {data.masterData.branches.map((branch) => <option key={branch.id} value={branch.name}>{branch.name}</option>)}
             </select>
           </label>
-          <label>หัวหน้างาน<input name="managerName" placeholder="Manager / Approver" /></label>
-          <label>ประเภทการจ้าง
-            <select name="employmentType" defaultValue="">
-              <option value="">เลือกประเภท</option>
-              {employmentTypeOptions.map((type) => <option key={type} value={type}>{type}</option>)}
-            </select>
-          </label>
-          <label>วันเริ่มงาน<input name="startDate" type="date" /></label>
           <label>ผู้รับผิดชอบ IT<input name="owner" placeholder="เช่น IT Support" /></label>
         </div>
 
@@ -832,6 +837,10 @@ function NewEmployeeRequestPage({ data, onRefresh }: { data: AppData; onRefresh:
             ))}
           </div>
         </div>
+
+        <label className="checkItem inlineCheck">
+          <input name="shipNotebookToBranch" type="checkbox" /> ต้องการให้ส่งโน๊ตบุ๊คไปที่สาขา
+        </label>
 
         <div className="checkGroup">
           <strong>ระบบ / สิทธิ์ที่ต้องเปิด</strong>
@@ -856,13 +865,16 @@ function NewEmployeeRequestPage({ data, onRefresh }: { data: AppData; onRefresh:
           {onboardingRequests.length ? onboardingRequests.map((request) => (
             <div className="recordItem requestCard" key={request.id}>
               <div>
-                <strong>{request.employeeName}</strong>
+                <strong>{request.employeeNameTh ?? request.employeeName}</strong>
                 <span>{request.employeeCode ?? "-"} | {request.position ?? "-"} | {request.department ?? "-"}</span>
               </div>
+              <span>Eng: {request.employeeNameEn ?? "-"}</span>
+              <span>ชื่อเล่น: {request.nickname ?? "-"} | โทร: {request.phone ?? "-"}</span>
               <span>{request.branch ?? "-"}</span>
               <span>เริ่มงาน: {request.startDate ? new Date(request.startDate).toLocaleDateString("th-TH") : "-"}</span>
               <span>อุปกรณ์: {request.requestedItems || "-"}</span>
               <span>ระบบ: {request.systemsNeeded || "-"}</span>
+              <span>ส่ง Notebook ไปสาขา: {request.shipNotebookToBranch ? "ใช่" : "ไม่ใช่"}</span>
               <span className="badge">{hrStatusLabels[request.status] ?? request.status}</span>
             </div>
           )) : <p className="empty">ยังไม่มีคำขอพนักงานใหม่</p>}
