@@ -744,6 +744,16 @@ h1 {
   grid-template-columns: 1fr;
 }
 
+.offboardingInlineForm {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #ffffff;
+}
+
 .masterDataGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(240px, 1fr));

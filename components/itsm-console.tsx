@@ -735,6 +735,7 @@ function MasterDataPage({ data, onRefresh }: { data: AppData; onRefresh: (data: 
 const departmentOptions = ["IT", "HR", "Accounting", "Sales", "Marketing", "Warehouse", "Management", "Operation"];
 const requestedDeviceOptions = ["Notebook", "PC", "Mobile Phone"];
 const systemAccessOptions = ["AD", "E-Mail", "E-memo/smartflow", "Ai CRM", "SAP B1"];
+const offboardingChecklist = ["เก็บโน๊ตบุ๊ค", "สำรองข้อมูล", "ปิด AD", "ปิด E-Mail", "ปิด E-memo/smartflow", "ปิด Ai CRM", "ปิด SAP B1"];
 
 const hrStatusLabels: Record<string, string> = {
   DRAFT: "Draft",
@@ -754,6 +755,8 @@ function selectedCheckboxValues(form: FormData, name: string) {
 
 function NewEmployeeRequestPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppData) => void }) {
   const [message, setMessage] = useState("");
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [offboardingFor, setOffboardingFor] = useState<string | null>(null);
 
   async function createRequest(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -794,13 +797,67 @@ function NewEmployeeRequestPage({ data, onRefresh }: { data: AppData; onRefresh:
     const appResponse = await fetch("/api/app");
     onRefresh(await appResponse.json());
     event.currentTarget.reset();
+    setShowCreateForm(false);
     setMessage("ส่งคำขอพนักงานใหม่สำเร็จ");
   }
 
-  const onboardingRequests = data.hrRequests.filter((request) => request.status !== "CANCELLED");
+  async function createOffboardingRequest(event: FormEvent<HTMLFormElement>, request: AppData["hrRequests"][number]) {
+    event.preventDefault();
+    setMessage("");
+    const form = new FormData(event.currentTarget);
+    const response = await fetch("/api/modules", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        module: "hrRequest",
+        type: "OFFBOARDING",
+        employeeCode: request.employeeCode,
+        employeeName: request.employeeName,
+        employeeNameEn: request.employeeNameEn,
+        employeeNameTh: request.employeeNameTh,
+        nickname: request.nickname,
+        phone: request.phone,
+        position: request.position,
+        department: request.department,
+        branch: request.branch,
+        lastWorkingDate: form.get("lastWorkingDate"),
+        requestedItems: request.requestedItems,
+        systemsNeeded: offboardingChecklist.join(", "),
+        status: "SUBMITTED",
+        owner: form.get("owner"),
+        notes: form.get("notes")
+      })
+    });
+
+    if (!response.ok) {
+      setMessage("แจ้งลาออกไม่สำเร็จ กรุณาตรวจข้อมูลอีกครั้ง");
+      return;
+    }
+
+    const appResponse = await fetch("/api/app");
+    onRefresh(await appResponse.json());
+    setOffboardingFor(null);
+    setMessage("ส่งรายการลาออกให้ IT สำเร็จ");
+  }
+
+  const onboardingRequests = data.hrRequests.filter((request) => request.status !== "CANCELLED" && !request.systemsNeeded?.includes("ปิด AD"));
+  const offboardingRequests = data.hrRequests.filter((request) => request.systemsNeeded?.includes("ปิด AD"));
 
   return (
-    <section className="moduleGrid wideModuleGrid">
+    <section className="dashboardPage">
+      <div className="dashboardHero">
+        <div>
+          <p className="eyebrow">HR Workflow</p>
+          <h1>New Employee Request</h1>
+          <p>HR แจ้งพนักงานใหม่ และแจ้งลาออกเพื่อให้ IT เตรียม/รับคืนอุปกรณ์และปิดระบบ</p>
+        </div>
+        <button type="button" onClick={() => setShowCreateForm((value) => !value)}>
+          {showCreateForm ? "ปิดฟอร์ม" : "New Employee Request"}
+        </button>
+      </div>
+      {message ? <p className="notice">{message}</p> : null}
+
+      {showCreateForm ? (
       <form className="panel form onboardingForm" onSubmit={createRequest}>
         <div className="panelHeader">
           <h2>New Employee Request</h2>
@@ -852,10 +909,11 @@ function NewEmployeeRequestPage({ data, onRefresh }: { data: AppData; onRefresh:
         </div>
 
         <label>หมายเหตุ<textarea name="notes" placeholder="รายละเอียดเพิ่มเติม เช่น โปรแกรมเฉพาะ แผนก หรือวันที่ต้องส่งมอบ" /></label>
-        {message ? <p className="notice">{message}</p> : null}
         <button type="submit">ส่งคำขอให้ IT</button>
       </form>
+      ) : null}
 
+      <section className="moduleGrid wideModuleGrid">
       <section className="panel">
         <div className="panelHeader">
           <h2>รายการพนักงานใหม่</h2>
@@ -876,9 +934,40 @@ function NewEmployeeRequestPage({ data, onRefresh }: { data: AppData; onRefresh:
               <span>ระบบ: {request.systemsNeeded || "-"}</span>
               <span>ส่ง Notebook ไปสาขา: {request.shipNotebookToBranch ? "ใช่" : "ไม่ใช่"}</span>
               <span className="badge">{hrStatusLabels[request.status] ?? request.status}</span>
+              <div className="actions">
+                <button className="secondary" type="button" onClick={() => setOffboardingFor(offboardingFor === request.id ? null : request.id)}>
+                  แจ้งลาออก
+                </button>
+              </div>
+              {offboardingFor === request.id ? (
+                <form className="offboardingInlineForm" onSubmit={(event) => createOffboardingRequest(event, request)}>
+                  <label>วันทำงานวันสุดท้าย<input name="lastWorkingDate" type="date" /></label>
+                  <label>ผู้รับผิดชอบ IT<input name="owner" placeholder="เช่น IT Support" /></label>
+                  <label>หมายเหตุ<textarea name="notes" placeholder="รายละเอียดการลาออก / นัดรับคืนอุปกรณ์" /></label>
+                  <button type="submit">ส่งรายการลาออกให้ IT</button>
+                </form>
+              ) : null}
             </div>
           )) : <p className="empty">ยังไม่มีคำขอพนักงานใหม่</p>}
         </div>
+      </section>
+      <section className="panel">
+        <div className="panelHeader">
+          <h2>รายการลาออก / IT ต้องดำเนินการ</h2>
+          <p>รับคืนอุปกรณ์ สำรองข้อมูล และปิดสิทธิ์ระบบ</p>
+        </div>
+        <div className="recordList">
+          {offboardingRequests.length ? offboardingRequests.map((request) => (
+            <div className="recordItem requestCard" key={request.id}>
+              <strong>{request.employeeNameTh ?? request.employeeName}</strong>
+              <span>{request.employeeCode ?? "-"} | {request.position ?? "-"} | {request.department ?? "-"}</span>
+              <span>{request.branch ?? "-"}</span>
+              <span>Checklist IT: {request.systemsNeeded}</span>
+              <span className="badge">{hrStatusLabels[request.status] ?? request.status}</span>
+            </div>
+          )) : <p className="empty">ยังไม่มีรายการลาออก</p>}
+        </div>
+      </section>
       </section>
     </section>
   );
