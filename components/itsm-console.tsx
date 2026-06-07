@@ -124,19 +124,19 @@ type MenuKey =
   | "settings"
   | "users";
 
-const menuItems: Array<{ key: MenuKey; label: string; roles: UserRole[] }> = [
-  { key: "dashboard", label: "Dashboard", roles: ["SUPER_ADMIN", "ADMIN", "USER", "IT_ADMIN", "IT_STAFF", "HR"] },
-  { key: "map", label: "Map View (แผนที่)", roles: ["SUPER_ADMIN", "ADMIN", "USER", "IT_ADMIN", "IT_STAFF", "HR"] },
-  { key: "assets", label: "Asset Management", roles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN", "IT_STAFF"] },
-  { key: "documents", label: "Document (ตรวจนับ)", roles: ["SUPER_ADMIN", "ADMIN", "USER", "IT_ADMIN", "IT_STAFF"] },
-  { key: "category", label: "Category (หมวดหมู่)", roles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN", "IT_STAFF"] },
-  { key: "qr", label: "Print QR Code", roles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN", "IT_STAFF"] },
-  { key: "location", label: "Location (สถานที่)", roles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN", "IT_STAFF"] },
-  { key: "scan", label: "Scan Office (Offline)", roles: ["SUPER_ADMIN", "ADMIN", "USER", "IT_ADMIN", "IT_STAFF"] },
-  { key: "sync", label: "Sync Data (รับ/ส่ง)", roles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN", "IT_STAFF"] },
-  { key: "report", label: "Report (รายงาน)", roles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN", "IT_STAFF"] },
-  { key: "settings", label: "Settings (ตั้งค่า)", roles: ["SUPER_ADMIN", "ADMIN"] },
-  { key: "users", label: "Users (ผู้ใช้งาน)", roles: ["SUPER_ADMIN"] }
+const menuItems: Array<{ key: MenuKey; label: string; roles: UserRole[]; icon: string; group?: string; accent?: "orange" }> = [
+  { key: "dashboard", label: "Dashboard", icon: "◔", roles: ["SUPER_ADMIN", "ADMIN", "USER", "IT_ADMIN", "IT_STAFF", "HR"] },
+  { key: "map", label: "Map View (แผนที่)", icon: "◇", roles: ["SUPER_ADMIN", "ADMIN", "USER", "IT_ADMIN", "IT_STAFF", "HR"] },
+  { key: "documents", label: "Document (ตรวจนับ)", icon: "▣", group: "Asset Management", roles: ["SUPER_ADMIN", "ADMIN", "USER", "IT_ADMIN", "IT_STAFF"] },
+  { key: "assets", label: "Asset (ทรัพย์สิน)", icon: "▦", group: "Asset Management", roles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN", "IT_STAFF"] },
+  { key: "category", label: "Category (หมวดหมู่)", icon: "▤", group: "Asset Management", roles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN", "IT_STAFF"] },
+  { key: "qr", label: "Print QR Code", icon: "▥", group: "Asset Management", roles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN", "IT_STAFF"] },
+  { key: "location", label: "Location (สถานที่)", icon: "⌖", group: "Asset Management", roles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN", "IT_STAFF"] },
+  { key: "scan", label: "Scan Office (Offline)", icon: "▧", group: "Tools & System", accent: "orange", roles: ["SUPER_ADMIN", "ADMIN", "USER", "IT_ADMIN", "IT_STAFF"] },
+  { key: "sync", label: "Sync Data (รับ/ส่ง)", icon: "⇅", group: "Tools & System", roles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN", "IT_STAFF"] },
+  { key: "report", label: "Report (รายงาน)", icon: "▨", group: "Tools & System", roles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN", "IT_STAFF"] },
+  { key: "settings", label: "Settings (ตั้งค่า)", icon: "⚙", group: "Admin Zone", roles: ["SUPER_ADMIN", "ADMIN"] },
+  { key: "users", label: "Users (ผู้ใช้งาน)", icon: "◉", group: "Admin Zone", roles: ["SUPER_ADMIN"] }
 ];
 
 function canView(role: UserRole, roles: UserRole[]) {
@@ -267,38 +267,73 @@ function LoginPanel({ onLogin }: { onLogin: (data: AppData) => void }) {
 
   return (
     <main className="loginPage">
-      <section className="loginVisual" aria-label="Smart Track Asset Management">
-        <div className="loginBrand">
-          <span>Smart Track</span>
-          <h1>Smart Track Asset Management</h1>
-          <p>ระบบบริหารจัดการทรัพย์สินองค์กร ตรวจนับ สแกน QR และออกรายงานในที่เดียว</p>
-        </div>
-      </section>
+      <div className="loginBlob blue" />
+      <div className="loginBlob purple" />
       <section className="loginPanel" aria-label="Login form">
-        <form className="loginCard" onSubmit={submit}>
-          <div>
-            <p className="eyebrow">Secure Access</p>
-            <h2>เข้าสู่ระบบ</h2>
-            <p>ใช้บัญชีผู้ดูแลระบบเพื่อเข้าใช้งาน Smart Track</p>
+        <form className="loginCard glassCard" onSubmit={submit}>
+          <div className="loginLogo">
+            <div className="smartCube">▦</div>
+            <h1>Smart Track Asset Management</h1>
+            <p>ระบบบริหารจัดการทรัพย์สินองค์กร</p>
           </div>
           <label>
             Username
-            <input value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" />
+            <div className="inputIcon">
+              <span>👤</span>
+              <input value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" placeholder="ชื่อผู้ใช้งาน" />
+            </div>
           </label>
           <label>
             Password
-            <input
-              value={password}
-              type="password"
-              onChange={(event) => setPassword(event.target.value)}
-              autoComplete="current-password"
-            />
+            <div className="inputIcon">
+              <span>🔒</span>
+              <input
+                value={password}
+                type="password"
+                onChange={(event) => setPassword(event.target.value)}
+                autoComplete="current-password"
+                placeholder="รหัสผ่าน"
+              />
+            </div>
           </label>
           {error ? <p className="notice error">{error}</p> : null}
-          <button type="submit" disabled={loading}>{loading ? "กำลังตรวจสอบ..." : "Login"}</button>
+          <button type="submit" disabled={loading}>{loading ? "กำลังตรวจสอบ..." : "เข้าสู่ระบบ"}</button>
+          <div className="loginVersion">Smart Track Asset Management System v2.0</div>
         </form>
       </section>
     </main>
+  );
+}
+
+function TodayLabel() {
+  return new Intl.DateTimeFormat("th-TH", {
+    day: "numeric",
+    month: "short",
+    year: "numeric"
+  }).format(new Date());
+}
+
+function Notifications({ data }: { data: AppData }) {
+  const urgentAssets = data.assets.filter((asset) => ["LOST", "DISPOSED", "PENDING_DISPOSAL", "REPAIR", "WAITING_REPAIR"].includes(asset.status)).slice(0, 5);
+  return (
+    <div className="notifyBox">
+      <button className="notifyButton" type="button" aria-label="การแจ้งเตือน">
+        <span>●</span>
+        🔔
+      </button>
+      <div className="notifyDropdown">
+        <div className="notifyHeader">
+          <strong>การแจ้งเตือน</strong>
+          <span>{urgentAssets.length}</span>
+        </div>
+        {urgentAssets.length ? urgentAssets.map((asset) => (
+          <div className="notifyItem" key={asset.id}>
+            <strong>{asset.name}</strong>
+            <span>สถานะ: {statusLabel(asset.status)}</span>
+          </div>
+        )) : <div className="notifyItem"><strong>ไม่มีรายการเร่งด่วน</strong><span>ระบบพร้อมใช้งาน</span></div>}
+      </div>
+    </div>
   );
 }
 
@@ -1380,28 +1415,60 @@ export default function ItsmConsole() {
 
   const visibleMenu = menuItems.filter((item) => canView(data.user.role, item.roles));
   const activeMenu = visibleMenu.some((item) => item.key === active) ? active : visibleMenu[0]?.key ?? "dashboard";
+  const renderedGroups = new Set<string>();
 
   return (
     <main className="appShell">
       <aside className="sidebar">
         <div className="brandBlock">
-          <span>U Smart Track</span>
-          <strong>Asset Manager</strong>
+          <div className="brandIcon">▦</div>
+          <div>
+            <strong>U Smart <span>Track</span></strong>
+            <small>Asset Manager</small>
+          </div>
         </div>
         <nav className="navList" aria-label="Main menu">
-          {visibleMenu.map((item) => (
-            <button className={activeMenu === item.key ? "active navButton" : "navButton"} key={item.key} onClick={() => setActive(item.key)}>
-              {item.label}
-            </button>
-          ))}
+          {visibleMenu.map((item) => {
+            const shouldRenderGroup = item.group && !renderedGroups.has(item.group);
+            if (item.group) renderedGroups.add(item.group);
+            return (
+              <div className="navChunk" key={item.key}>
+                {shouldRenderGroup ? <p className="navGroup">{item.group}</p> : null}
+                <button
+                  className={`${activeMenu === item.key ? "active navButton" : "navButton"} ${item.accent === "orange" ? "orangeNav" : ""}`}
+                  onClick={() => setActive(item.key)}
+                >
+                  <span className="navIcon">{item.icon}</span>
+                  <span>{item.label}</span>
+                </button>
+              </div>
+            );
+          })}
+          <button className="installButton" type="button">⇩ ติดตั้งแอป</button>
         </nav>
         <div className="sidebarFooter">
-          <span>{data.user.username}</span>
-          <strong>{roleLabel(data.user.role)}</strong>
-          <button className="secondary" onClick={logout}>Logout</button>
+          <div className="profileLink">
+            <div className="avatar">{(data.user.name || data.user.username || "A").slice(0, 1).toUpperCase()}</div>
+            <div>
+              <strong>{data.user.name}</strong>
+              <span>{roleLabel(data.user.role)}</span>
+            </div>
+          </div>
+          <button className="logoutButton" onClick={logout} title="ออกจากระบบ">ออกจากระบบ</button>
         </div>
       </aside>
       <section className="page">
+        <header className="smartTopbar">
+          <div className="mobileBrand">
+            <span className="miniCube">▦</span>
+            <strong>U Smart Track</strong>
+          </div>
+          <div className="topbarActions">
+            <span className="dateLabel">📅 {TodayLabel()}</span>
+            <Notifications data={data} />
+            <button className="scanButton" type="button" onClick={() => setActive("scan")}>📷 Scan</button>
+          </div>
+        </header>
         {activeMenu === "dashboard" ? <Dashboard data={data} /> : null}
         {activeMenu === "map" ? <MapViewPage data={data} /> : null}
         {activeMenu === "assets" ? <AssetsPage data={data} onRefresh={setData} /> : null}

@@ -1,9 +1,16 @@
 import type { Metadata } from "next";
+import { Prompt } from "next/font/google";
 import "./globals.css";
 
+const prompt = Prompt({
+  subsets: ["thai", "latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  display: "swap"
+});
+
 export const metadata: Metadata = {
-  title: "IT Service Management",
-  description: "IT Service Management inventory and workflow system"
+  title: "U Smart Track - Asset Management",
+  description: "Smart Track Asset Management System"
 };
 
 export default function RootLayout({
@@ -13,7 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="th">
-      <body>{children}</body>
+      <body className={prompt.className}>{children}</body>
     </html>
   );
 }
