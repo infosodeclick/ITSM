@@ -1527,6 +1527,196 @@ h1 {
   display: none;
 }
 
+.compactActionBar {
+  grid-template-columns: minmax(260px, 520px);
+}
+
+.locationFormBar {
+  grid-template-columns: repeat(5, minmax(120px, 1fr));
+}
+
+.qrGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.qrSticker {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px;
+  background: #ffffff;
+  text-align: center;
+}
+
+.fakeQr {
+  display: grid;
+  width: 86px;
+  height: 86px;
+  place-items: center;
+  border: 8px solid #111827;
+  background:
+    linear-gradient(90deg, #111827 8px, transparent 8px) 0 0 / 18px 18px,
+    linear-gradient(#111827 8px, transparent 8px) 0 0 / 18px 18px,
+    #ffffff;
+  color: #111827;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.scannerPanel {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(300px, 420px);
+  gap: 18px;
+}
+
+.cameraBox {
+  display: grid;
+  min-height: 420px;
+  place-items: center;
+  gap: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #111827;
+  color: #ffffff;
+  text-align: center;
+}
+
+.cameraBox i {
+  color: #60a5fa;
+  font-size: 42px;
+}
+
+.cameraBox small {
+  max-width: 520px;
+  color: #d1d5db;
+}
+
+.scanResult,
+.syncCard {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  border: 1px solid #f3f4f6;
+  border-radius: 16px;
+  padding: 18px;
+  background: #ffffff;
+}
+
+.scanResult h3 {
+  margin: 8px 0 0;
+  font-size: 22px;
+}
+
+.scanResult dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.scanResult dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #f3f4f6;
+  padding-bottom: 8px;
+}
+
+.scanResult dt {
+  color: #6b7280;
+  font-weight: 700;
+}
+
+.scanResult dd {
+  margin: 0;
+  color: #111827;
+  font-weight: 800;
+}
+
+.syncGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.syncCard strong {
+  color: #1f2937;
+  font-size: 18px;
+}
+
+.syncCard span,
+.syncSteps span {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.syncSteps {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+
+.syncSteps div {
+  display: grid;
+  gap: 4px;
+}
+
+.buttonLink {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 8px;
+  border-radius: 12px;
+  padding: 8px 12px;
+  background: #16a34a;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.reportFilters {
+  grid-template-columns: repeat(6, minmax(120px, 1fr));
+}
+
+.reportTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reportTabs button {
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #4b5563;
+  box-shadow: none;
+}
+
+.reportTabs button.active {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+@media print {
+  .sidebar,
+  .smartTopbar,
+  .assetToolbar,
+  .smartFilterBar {
+    display: none !important;
+  }
+
+  .appShell,
+  .page {
+    display: block;
+    height: auto;
+    overflow: visible;
+  }
+}
+
 .hrWorkflowPanel {
   overflow: hidden;
 }

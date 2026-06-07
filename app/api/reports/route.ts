@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/prisma";
 import { AssetStatus } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 const statusText: Record<AssetStatus, string> = {
   IN_STOCK: "สต็อก",
@@ -77,7 +77,7 @@ export async function GET() {
   return new Response(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="itsm-assets-${new Date().toISOString().slice(0, 10)}.csv"`
+      "Content-Disposition": `attachment; filename="smart-track-assets-${new Date().toISOString().slice(0, 10)}.csv"`
     }
   });
 }

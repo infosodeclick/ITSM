@@ -349,6 +349,28 @@ function SmartStatCard({ icon, tone, label, value }: { icon: string; tone: strin
   );
 }
 
+function downloadJson(filename: string, data: unknown) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+function SmartPageTitle({ title, description, action }: { title: string; description: string; action?: React.ReactNode }) {
+  return (
+    <div className="smartPageHeader">
+      <div>
+        <h2>{title}</h2>
+        <p>{description}</p>
+      </div>
+      {action ? <div className="assetToolbar">{action}</div> : null}
+    </div>
+  );
+}
+
 function Dashboard({ data }: { data: AppData }) {
   const totalValue = data.assets.reduce((sum, asset) => sum + Number(asset.purchasePrice ?? 0), 0);
   const locationSummary = summarizeBy(data.assets, (asset) => asset.branch?.name ?? asset.location ?? "ไม่ระบุสถานที่").slice(0, 5);
@@ -468,119 +490,326 @@ function MapViewPage({ data }: { data: AppData }) {
 }
 
 function DocumentsPage({ data }: { data: AppData }) {
-  return (
-    <PlaceholderPanel title="เอกสารตรวจนับ" description="จัดการรอบการตรวจนับทรัพย์สิน">
-      <div className="recordList">
-        <div className="recordItem">
-          <strong>DOC-{new Date().getFullYear()}-0001</strong>
-          <span>เอกสารตรวจนับเริ่มต้น | Assets {data.assets.length} รายการ | สถานะ Draft</span>
-        </div>
-      </div>
-    </PlaceholderPanel>
-  );
-}
+  const [documents, setDocuments] = useState([
+    { id: "DOC-20260514-0002", date: "14/05/2026", location: "C08", owner: "ทดสอบ2", scanned: 1, status: "ปิดงานแล้ว" },
+    { id: "DOC-20260514-0001", date: "14/05/2026", location: "C08", owner: "ทดสอบ2", scanned: 0, status: "เริ่มตรวจนับ" }
+  ]);
 
-function CategoryPage({ data }: { data: AppData }) {
-  const categorySummary = summarizeBy(data.assets, (asset) => asset.category?.name ?? assetTypeLabel(asset.type));
-  const fallbackCategories = data.masterData.assetTypes.map((type) => ({ label: type.name, count: 0 }));
-  const rows = categorySummary.length ? categorySummary : fallbackCategories;
+  function createDocument(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const today = new Date();
+    const running = String(documents.length + 1).padStart(4, "0");
+    setDocuments((items) => [
+      {
+        id: `DOC-${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}-${running}`,
+        date: today.toLocaleDateString("th-TH"),
+        location: String(form.get("location_id") || "-"),
+        owner: "ผู้ดูแลระบบ",
+        scanned: 0,
+        status: "เริ่มตรวจนับ"
+      },
+      ...items
+    ]);
+    event.currentTarget.reset();
+  }
+
   return (
-    <PlaceholderPanel title="หมวดหมู่ทรัพย์สิน (Category)" description={`Total Category: ${rows.length}`}>
-      <div className="tableWrap">
+    <section className="smartAssetPage">
+      <SmartPageTitle
+        title="เอกสารตรวจนับ"
+        description="Global View - จัดการรอบการตรวจนับทรัพย์สิน"
+        action={<button type="submit" form="createDocumentForm"><i className="fa-solid fa-plus" /> สร้างเอกสารใหม่</button>}
+      />
+      <form id="createDocumentForm" className="smartFilterBar compactActionBar" onSubmit={createDocument}>
+        <input name="action" type="hidden" value="create" />
+        <label>เลือกสถานที่ตรวจนับ (Location)
+          <select name="location_id" required defaultValue="">
+            <option value="">-- กรุณาเลือกสถานที่ --</option>
+            {data.masterData.branches.map((branch) => <option key={branch.id} value={branch.name}>{branch.name}</option>)}
+          </select>
+        </label>
+      </form>
+      <div className="smartTableWrap">
         <table>
-          <thead><tr><th>หมวดหมู่</th><th>จำนวนทรัพย์สิน</th><th>จัดการ</th></tr></thead>
+          <thead><tr><th>Document</th><th>วันที่</th><th>Location</th><th>โดย</th><th>Scanned Items</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
           <tbody>
-            {rows.map((item) => (
-              <tr key={item.label}>
-                <td>{item.label}</td>
-                <td>{item.count} Assets</td>
-                <td><span className="badge">ดูรายการทรัพย์สิน</span></td>
+            {documents.map((doc) => (
+              <tr key={doc.id}>
+                <td><strong>{doc.id}</strong></td>
+                <td>{doc.date}</td>
+                <td>{doc.location}</td>
+                <td>โดย: {doc.owner}</td>
+                <td>{doc.scanned} รายการ</td>
+                <td><span className="smartStatus">{doc.status}</span></td>
+                <td><button className="tabButton" type="button">เปิดเอกสารตรวจนับ</button></td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-    </PlaceholderPanel>
+    </section>
   );
 }
 
-function LocationPage({ data }: { data: AppData }) {
-  const assetCountByLocation = new Map(summarizeBy(data.assets, (asset) => asset.branch?.name ?? asset.location ?? "ไม่ระบุ").map((item) => [item.label, item.count]));
+function CategoryPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppData) => void }) {
+  const [message, setMessage] = useState("");
+  const categorySummary = summarizeBy(data.assets, (asset) => asset.category?.name ?? assetTypeLabel(asset.type));
+  const rows = data.masterData.assetTypes.map((type) => ({
+    code: type.prefix,
+    label: type.name,
+    count: categorySummary.find((item) => item.label === type.name)?.count ?? 0
+  }));
+
+  async function createCategory(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage("");
+    const form = new FormData(event.currentTarget);
+    const name = String(form.get("name") || "").trim();
+    const code = String(form.get("code") || name).trim().toUpperCase().replaceAll(" ", "_");
+    const response = await fetch("/api/master-data", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind: "assetType", code, name, prefix: code.slice(0, 8), description: "" })
+    });
+    if (!response.ok) {
+      setMessage("เพิ่มหมวดหมู่ไม่สำเร็จ กรุณาตรวจข้อมูลซ้ำ");
+      return;
+    }
+    const appResponse = await fetch("/api/app");
+    onRefresh(await appResponse.json());
+    event.currentTarget.reset();
+    setMessage("เพิ่มหมวดหมู่สำเร็จ");
+  }
+
   return (
-    <PlaceholderPanel title="ข้อมูลสถานที่ (Location)" description="กำหนดสถานที่และดูจำนวนทรัพย์สินในแต่ละจุด">
-      <div className="tableWrap">
+    <section className="smartAssetPage">
+      <SmartPageTitle
+        title="หมวดหมู่ทรัพย์สิน (Category)"
+        description="จัดกลุ่มประเภทของทรัพย์สินในระบบ"
+        action={<button type="submit" form="createCategoryForm"><i className="fa-solid fa-plus" /> เพิ่มหมวดหมู่</button>}
+      />
+      <form id="createCategoryForm" className="smartFilterBar compactActionBar" onSubmit={createCategory}>
+        <label>รหัสหมวดหมู่<input name="code" placeholder="TO04" /></label>
+        <label>ชื่อหมวดหมู่<input name="name" required placeholder="เครื่องมือเครื่องใช้" /></label>
+      </form>
+      {message ? <p className="notice">{message}</p> : null}
+      <div className="smartTableWrap">
         <table>
-          <thead><tr><th>Code</th><th>Location</th><th>พิกัด</th><th>Assets</th></tr></thead>
+          <thead><tr><th>Code</th><th>หมวดหมู่</th><th>Assets</th><th>จัดการ</th></tr></thead>
+          <tbody>
+            {rows.map((item) => (
+              <tr key={item.code}>
+                <td>{item.code}</td>
+                <td>{item.label}</td>
+                <td>{item.count} Assets</td>
+                <td><button className="tabButton" type="button">ดูรายการทรัพย์สิน</button> <button className="iconButton" type="button">แก้ไข</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function LocationPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppData) => void }) {
+  const [message, setMessage] = useState("");
+  const assetCountByLocation = new Map(summarizeBy(data.assets, (asset) => asset.branch?.name ?? asset.location ?? "ไม่ระบุ").map((item) => [item.label, item.count]));
+
+  async function createLocation(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage("");
+    const form = new FormData(event.currentTarget);
+    const response = await fetch("/api/master-data", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kind: "location",
+        code: form.get("code"),
+        name: form.get("name"),
+        description: `lat=${form.get("latitude") || ""};lng=${form.get("longitude") || ""};radius=${form.get("radius") || ""}`
+      })
+    });
+    if (!response.ok) {
+      setMessage("เพิ่มสถานที่ไม่สำเร็จ กรุณาตรวจข้อมูลซ้ำ");
+      return;
+    }
+    const appResponse = await fetch("/api/app");
+    onRefresh(await appResponse.json());
+    event.currentTarget.reset();
+    setMessage("เพิ่มสถานที่สำเร็จ");
+  }
+
+  return (
+    <section className="smartAssetPage">
+      <SmartPageTitle
+        title="ข้อมูลสถานที่ (Location)"
+        description="กำหนดพิกัดและรัศมีของแต่ละสถานที่ที่นี่"
+        action={<button type="submit" form="createLocationForm"><i className="fa-solid fa-plus" /> เพิ่มสถานที่</button>}
+      />
+      <form id="createLocationForm" className="smartFilterBar locationFormBar" onSubmit={createLocation}>
+        <label>Code<input name="code" required placeholder="C08" /></label>
+        <label>ชื่อสถานที่<input name="name" required placeholder="C08" /></label>
+        <label>Latitude<input name="latitude" inputMode="decimal" placeholder="13.7563" /></label>
+        <label>Longitude<input name="longitude" inputMode="decimal" placeholder="100.5018" /></label>
+        <label>Radius<input name="radius" inputMode="numeric" placeholder="1000" /></label>
+      </form>
+      {message ? <p className="notice">{message}</p> : null}
+      <div className="smartTableWrap">
+        <table>
+          <thead><tr><th>Location</th><th>บริษัท</th><th>พิกัด</th><th>Assets</th><th>จัดการ</th></tr></thead>
           <tbody>
             {data.masterData.branches.map((branch) => (
               <tr key={branch.id}>
-                <td>{branch.code}</td>
-                <td>{branch.name}</td>
+                <td><strong>{branch.name}</strong><br /><span>{branch.code}</span></td>
+                <td>Smart Track Asset Management</td>
                 <td>ยังไม่ระบุพิกัด</td>
-                <td>{assetCountByLocation.get(branch.name) ?? 0}</td>
+                <td>{assetCountByLocation.get(branch.name) ?? 0} Assets</td>
+                <td><button className="iconButton" type="button">แก้ไข</button> <button className="iconButton" type="button">ลบ</button></td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-    </PlaceholderPanel>
+    </section>
   );
 }
 
 function QrCodePage({ data }: { data: AppData }) {
   return (
-    <PlaceholderPanel title="พิมพ์สติ๊กเกอร์ QR Code" description="เลือกรายการทรัพย์สินเพื่อพิมพ์ QR Code">
-      <div className="tableWrap">
-        <table>
-          <thead><tr><th>เลือก</th><th>รหัส</th><th>Asset</th><th>Location</th><th>Status</th></tr></thead>
-          <tbody>
-            {data.assets.slice(0, 50).map((asset) => (
-              <tr key={asset.id}>
-                <td><input type="checkbox" aria-label={`เลือก ${asset.assetTag}`} /></td>
-                <td>{asset.assetTag}</td>
-                <td>{asset.name}</td>
-                <td>{asset.branch?.name ?? asset.location ?? "-"}</td>
-                <td>{statusLabel(asset.status)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <section className="smartAssetPage printArea">
+      <SmartPageTitle
+        title="พิมพ์สติ๊กเกอร์ QR Code"
+        description="Global View - เลือกรายการทรัพย์สินเพื่อพิมพ์ QR Code"
+        action={<button type="button" onClick={() => window.print()}><i className="fa-solid fa-print" /> พิมพ์</button>}
+      />
+      <div className="smartFilterBar">
+        <label>บริษัท
+          <select defaultValue=""><option value="">-- ทั้งหมด --</option><option>Smart Track Asset Management</option></select>
+        </label>
+        <label>สถานที่ (Zone)
+          <select defaultValue=""><option value="">-- ทั้งหมด --</option>{data.masterData.branches.map((branch) => <option key={branch.id}>{branch.name}</option>)}</select>
+        </label>
+        <label>ค้นหา<input placeholder="รหัส / ชื่อทรัพย์สิน" /></label>
+        <button className="filterButton" type="button">กรอง</button>
       </div>
-    </PlaceholderPanel>
+      <div className="qrGrid">
+        {(data.assets.length ? data.assets : [{ id: "empty", assetTag: "ASSET-CODE", name: "Asset Name", branch: null, location: "Location" } as Asset]).slice(0, 24).map((asset) => (
+          <div className="qrSticker" key={asset.id}>
+            <div className="fakeQr">{asset.assetTag.slice(0, 2)}</div>
+            <strong>{asset.assetTag}</strong>
+            <span>{asset.name}</span>
+            <small>{asset.branch?.name ?? asset.location ?? "-"}</small>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
-function ScanPage() {
+function ScanPage({ data }: { data: AppData }) {
+  const [code, setCode] = useState("");
+  const asset = data.assets.find((item) => item.assetTag.toLowerCase() === code.toLowerCase() || item.serialNumber?.toLowerCase() === code.toLowerCase());
   return (
-    <PlaceholderPanel title="ตรวจสอบข้อมูลทรัพย์สิน" description="สแกน QR Code เพื่อดูรายละเอียดสถานะและตำแหน่ง">
-      <div className="scanBox">
-        <strong>กำลังเตรียมระบบสแกน...</strong>
-        <span>ขั้นถัดไปจะเชื่อมกล้องมือถือและ QR lookup ตามรหัสทรัพย์สิน</span>
+    <section className="smartAssetPage">
+      <SmartPageTitle title="ตรวจสอบข้อมูลทรัพย์สิน" description="สแกน QR Code เพื่อดูรายละเอียดสถานะและตำแหน่ง" />
+      <div className="scannerPanel">
+        <div className="cameraBox">
+          <i className="fa-solid fa-camera" />
+          <strong>กำลังเปิดกล้อง...</strong>
+          <span>ลองเปิดกล้องอีกครั้ง</span>
+          <small>* หากใช้มือถือผ่าน WiFi (IP Address) ต้องตั้งค่าเป็น HTTPS หรือใช้ Localhost เท่านั้น</small>
+        </div>
+        <div className="scanResult">
+          <label>Code / Serial Number<input value={code} onChange={(event) => setCode(event.target.value)} placeholder="สแกนหรือกรอกรหัสทรัพย์สิน" /></label>
+          <h3>{asset?.name ?? "Asset Name"}</h3>
+          <p>{asset ? "Checking..." : "Checking... -"}</p>
+          <dl>
+            <div><dt>Code</dt><dd>{asset?.assetTag ?? "-"}</dd></div>
+            <div><dt>Price</dt><dd>{asset ? formatMoney(asset.purchasePrice) : "-"}</dd></div>
+            <div><dt>Status</dt><dd>{asset ? statusLabel(asset.status) : "-"}</dd></div>
+            <div><dt>Location</dt><dd>{asset?.branch?.name ?? asset?.location ?? "-"}</dd></div>
+          </dl>
+          <button type="button" onClick={() => setCode("")}>สแกนรายการต่อไป</button>
+        </div>
       </div>
-    </PlaceholderPanel>
+    </section>
   );
 }
 
-function SyncPage() {
+function SyncPage({ data }: { data: AppData }) {
+  const [message, setMessage] = useState("");
+  async function uploadSync(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const file = (new FormData(event.currentTarget).get("sync_file") as File | null);
+    if (!file || file.size === 0) {
+      setMessage("กรุณาเลือกไฟล์ JSON ก่อนอัปโหลด");
+      return;
+    }
+    try {
+      JSON.parse(await file.text());
+      setMessage("อ่านไฟล์สำเร็จ ระบบพร้อมนำไปสร้างเอกสารตรวจนับในขั้นตอนถัดไป");
+    } catch {
+      setMessage("ไฟล์ไม่ใช่ JSON ที่ถูกต้อง");
+    }
+  }
   return (
-    <PlaceholderPanel title="รับ/ส่ง ข้อมูล (Sync Offline)" description="จัดการข้อมูลเพื่อใช้งานตรวจนับผ่าน Mobile App">
-      <div className="moduleGrid">
-        <div className="recordItem">
+    <section className="smartAssetPage">
+      <SmartPageTitle title="รับ/ส่ง ข้อมูล (Sync Offline)" description="จัดการข้อมูลเพื่อใช้งานตรวจนับผ่าน Mobile App" />
+      <div className="syncGrid">
+        <div className="syncCard">
           <strong>ดาวน์โหลด Master Data</strong>
           <span>ส่งออกข้อมูลทรัพย์สิน สถานที่ และหมวดหมู่เป็น JSON</span>
+          <button type="button" onClick={() => downloadJson("smart-track-master-data.json", { assets: data.assets, locations: data.masterData.branches, assetTypes: data.masterData.assetTypes })}>ดาวน์โหลดข้อมูลล่าสุด</button>
         </div>
-        <div className="recordItem">
+        <form className="syncCard" onSubmit={uploadSync}>
           <strong>อัปโหลดผลการตรวจนับ</strong>
           <span>นำผลสแกนจากมือถือกลับเข้าสู่ระบบ</span>
+          <input name="sync_file" type="file" accept="application/json,.json" />
+          <button type="submit">เลือกไฟล์และอัปโหลด</button>
+        </form>
+      </div>
+      {message ? <p className="notice">{message}</p> : null}
+      <div className="smartPanel">
+        <div className="smartPanelHeader"><h2>ขั้นตอนการ Sync ข้อมูล</h2></div>
+        <div className="syncSteps">
+          <div><strong>1. ดาวน์โหลด</strong><span>กดปุ่มดาวน์โหลดเพื่อรับไฟล์ข้อมูล Master ล่าสุดจากระบบ</span></div>
+          <div><strong>2. ตรวจนับ</strong><span>นำไฟล์เข้าแอป Mobile และทำการสแกนทรัพย์สินตามสถานที่ต่างๆ</span></div>
+          <div><strong>3. อัปโหลด</strong><span>เมื่อตรวจเสร็จ ให้ส่งออกไฟล์จากแอปแล้วนำมาอัปโหลดที่หน้านี้</span></div>
+          <div><strong>4. ผลลัพธ์</strong><span>ระบบจะสร้างเอกสารตรวจนับและรายงานความเคลื่อนไหวให้อัตโนมัติ</span></div>
         </div>
       </div>
-    </PlaceholderPanel>
+    </section>
   );
 }
 
 function ReportPage({ data }: { data: AppData }) {
   return (
-    <PlaceholderPanel title="ระบบรายงานทรัพย์สิน" description="รายงานผลตรวจนับ ทรัพย์สินรายสถานที่ และประวัติการโอนย้าย">
+    <section className="smartAssetPage">
+      <SmartPageTitle
+        title="ระบบรายงานทรัพย์สิน"
+        description="รายงานผลตรวจนับ ทรัพย์สินรายบริษัท ประวัติการโอนย้าย และทรัพย์สินหาย/จำหน่าย"
+        action={<><button type="button" onClick={() => window.print()}><i className="fa-solid fa-print" /> พิมพ์ทั้งหมด</button><a className="buttonLink" href="/api/reports"><i className="fa-solid fa-file-excel" /> Excel</a></>}
+      />
+      <div className="smartFilterBar reportFilters">
+        <label>เริ่มต้น<input type="date" /></label>
+        <label>สิ้นสุด<input type="date" /></label>
+        <label>บริษัท
+          <select defaultValue=""><option value="">-- ทุกบริษัท --</option><option>Smart Track Asset Management</option><option>TPB</option><option>TPP WASTE MANAGEMENT CO., LTD.</option></select>
+        </label>
+        <label>ไตรมาส
+          <select defaultValue=""><option value="">-- ไม่ระบุ --</option><option>Q1</option><option>Q2</option><option>Q3</option><option>Q4</option></select>
+        </label>
+        <label>ปี<input inputMode="numeric" placeholder="2026" /></label>
+        <button className="filterButton" type="button">ค้นหา</button>
+      </div>
+      <div className="reportTabs">
+        <button className="active" type="button">1. รายงานผลตรวจนับ</button>
+        <button type="button">2. ทรัพย์สินรายบริษัท</button>
+        <button type="button">3. ประวัติการโอนย้าย</button>
+        <button type="button">4. ทรัพย์สินหาย/จำหน่าย</button>
+      </div>
       <div className="statStrip">
         <div><span>Assets</span><strong>{data.assets.length}</strong></div>
         <div><span>Locations</span><strong>{data.masterData.branches.length}</strong></div>
@@ -598,7 +827,7 @@ function ReportPage({ data }: { data: AppData }) {
           </tbody>
         </table>
       </div>
-    </PlaceholderPanel>
+    </section>
   );
 }
 
@@ -1400,11 +1629,11 @@ export default function ItsmConsole() {
         {activeMenu === "map" ? <MapViewPage data={data} /> : null}
         {activeMenu === "assets" ? <AssetsPage data={data} onRefresh={setData} /> : null}
         {activeMenu === "documents" ? <DocumentsPage data={data} /> : null}
-        {activeMenu === "category" ? <CategoryPage data={data} /> : null}
+        {activeMenu === "category" ? <CategoryPage data={data} onRefresh={setData} /> : null}
         {activeMenu === "qr" ? <QrCodePage data={data} /> : null}
-        {activeMenu === "location" ? <LocationPage data={data} /> : null}
-        {activeMenu === "scan" ? <ScanPage /> : null}
-        {activeMenu === "sync" ? <SyncPage /> : null}
+        {activeMenu === "location" ? <LocationPage data={data} onRefresh={setData} /> : null}
+        {activeMenu === "scan" ? <ScanPage data={data} /> : null}
+        {activeMenu === "sync" ? <SyncPage data={data} /> : null}
         {activeMenu === "report" ? <ReportPage data={data} /> : null}
         {activeMenu === "settings" ? <MasterDataPage data={data} onRefresh={setData} /> : null}
         {activeMenu === "users" ? <UsersPage data={data} onRefresh={setData} /> : null}
