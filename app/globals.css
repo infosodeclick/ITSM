@@ -1213,6 +1213,318 @@ h1 {
   box-shadow: 0 1px 2px rgba(31, 41, 55, 0.05);
 }
 
+.smartDashboard {
+  display: grid;
+  gap: 24px;
+}
+
+.smartStatsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.smartStatCard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid #f3f4f6;
+  border-radius: 16px;
+  padding: 20px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(31, 41, 55, 0.05);
+}
+
+.smartStatIcon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 12px;
+  font-size: 20px;
+}
+
+.smartStatIcon.emerald {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+}
+
+.smartStatIcon.blue {
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
+}
+
+.smartStatIcon.orange {
+  background: rgba(249, 115, 22, 0.1);
+  color: #ea580c;
+}
+
+.smartStatIcon.purple {
+  background: rgba(139, 92, 246, 0.1);
+  color: #7c3aed;
+}
+
+.smartStatCard p {
+  margin: 0;
+  color: #9ca3af;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.smartStatCard h3 {
+  margin: 4px 0 0;
+  color: #1f2937;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.smartDashboardGrid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 24px;
+}
+
+.smartPanel {
+  border: 1px solid #f3f4f6;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(31, 41, 55, 0.05);
+}
+
+.statusPanel {
+  grid-row: span 2;
+}
+
+.smartPanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #f9fafb;
+  padding: 16px 20px;
+}
+
+.smartPanelHeader h2 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 16px;
+}
+
+.smartPanelHeader span {
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.statusList,
+.compactList,
+.companyList,
+.urgentList {
+  display: grid;
+  gap: 12px;
+  padding: 18px 20px;
+}
+
+.statusLine,
+.compactList div,
+.urgentList div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.statusLine span,
+.compactList span,
+.companyList span,
+.urgentList span {
+  color: #4b5563;
+  font-size: 14px;
+}
+
+.statusLine strong,
+.compactList strong,
+.urgentList strong {
+  color: #111827;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.companyList div {
+  display: grid;
+  gap: 3px;
+  border-bottom: 1px solid #f3f4f6;
+  padding-bottom: 10px;
+}
+
+.companyList div:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.companyList strong {
+  color: #1f2937;
+  font-size: 14px;
+}
+
+.companyList b {
+  color: #2563eb;
+  font-size: 13px;
+}
+
+.urgentPanel {
+  border-color: #fee2e2;
+}
+
+.urgentList strong {
+  color: #dc2626;
+}
+
+.smartAssetPage {
+  display: grid;
+  gap: 16px;
+}
+
+.smartPageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.smartPageHeader h2 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.smartPageHeader p {
+  margin: 4px 0 0;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.assetToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.assetToolbar button,
+.tabButton,
+.filterButton,
+.iconButton {
+  min-height: 38px;
+  border-radius: 12px;
+  box-shadow: none;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.tabButton {
+  background: #ffffff;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
+}
+
+.tabButton.active {
+  background: #eff6ff;
+  color: #2563eb;
+  border-color: #bfdbfe;
+}
+
+.smartFilterBar {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr auto;
+  gap: 12px;
+  border: 1px solid #f3f4f6;
+  border-radius: 16px;
+  padding: 16px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(31, 41, 55, 0.05);
+}
+
+.smartTableWrap {
+  overflow-x: auto;
+  border: 1px solid #f3f4f6;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(31, 41, 55, 0.05);
+}
+
+.smartAssetTable {
+  min-width: 1040px;
+}
+
+.smartAssetTable th {
+  background: #f9fafb;
+  color: #6b7280;
+  font-size: 12px;
+  text-transform: none;
+}
+
+.smartAssetTable td {
+  color: #374151;
+  font-size: 13px;
+}
+
+.smartAssetTable td span {
+  color: #6b7280;
+}
+
+.assetThumb {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.smartStatus {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: #ecfdf5;
+  color: #059669 !important;
+  font-weight: 800;
+}
+
+.iconButton {
+  min-width: 38px;
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.smartEmptyAsset {
+  display: grid;
+  min-height: 220px;
+  place-items: center;
+  gap: 8px;
+  border: 1px dashed #d1d5db;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #6b7280;
+  text-align: center;
+}
+
+.smartEmptyAsset i {
+  color: #93c5fd;
+  font-size: 34px;
+}
+
+.smartEmptyAsset strong {
+  color: #1f2937;
+}
+
+.hiddenLegacyTable {
+  display: none;
+}
+
 .hrWorkflowPanel {
   overflow: hidden;
 }

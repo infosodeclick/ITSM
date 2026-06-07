@@ -125,18 +125,18 @@ type MenuKey =
   | "users";
 
 const menuItems: Array<{ key: MenuKey; label: string; roles: UserRole[]; icon: string; group?: string; accent?: "orange" }> = [
-  { key: "dashboard", label: "Dashboard", icon: "◔", roles: ["SUPER_ADMIN", "ADMIN", "USER", "IT_ADMIN", "IT_STAFF", "HR"] },
-  { key: "map", label: "Map View (แผนที่)", icon: "◇", roles: ["SUPER_ADMIN", "ADMIN", "USER", "IT_ADMIN", "IT_STAFF", "HR"] },
-  { key: "documents", label: "Document (ตรวจนับ)", icon: "▣", group: "Asset Management", roles: ["SUPER_ADMIN", "ADMIN", "USER", "IT_ADMIN", "IT_STAFF"] },
-  { key: "assets", label: "Asset (ทรัพย์สิน)", icon: "▦", group: "Asset Management", roles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN", "IT_STAFF"] },
-  { key: "category", label: "Category (หมวดหมู่)", icon: "▤", group: "Asset Management", roles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN", "IT_STAFF"] },
-  { key: "qr", label: "Print QR Code", icon: "▥", group: "Asset Management", roles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN", "IT_STAFF"] },
-  { key: "location", label: "Location (สถานที่)", icon: "⌖", group: "Asset Management", roles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN", "IT_STAFF"] },
-  { key: "scan", label: "Scan Office (Offline)", icon: "▧", group: "Tools & System", accent: "orange", roles: ["SUPER_ADMIN", "ADMIN", "USER", "IT_ADMIN", "IT_STAFF"] },
-  { key: "sync", label: "Sync Data (รับ/ส่ง)", icon: "⇅", group: "Tools & System", roles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN", "IT_STAFF"] },
-  { key: "report", label: "Report (รายงาน)", icon: "▨", group: "Tools & System", roles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN", "IT_STAFF"] },
-  { key: "settings", label: "Settings (ตั้งค่า)", icon: "⚙", group: "Admin Zone", roles: ["SUPER_ADMIN", "ADMIN"] },
-  { key: "users", label: "Users (ผู้ใช้งาน)", icon: "◉", group: "Admin Zone", roles: ["SUPER_ADMIN"] }
+  { key: "dashboard", label: "Dashboard", icon: "fa-solid fa-chart-pie", roles: ["SUPER_ADMIN", "ADMIN", "USER", "IT_ADMIN", "IT_STAFF", "HR"] },
+  { key: "map", label: "Map View (แผนที่)", icon: "fa-solid fa-map", roles: ["SUPER_ADMIN", "ADMIN", "USER", "IT_ADMIN", "IT_STAFF", "HR"] },
+  { key: "documents", label: "Document (ตรวจนับ)", icon: "fa-solid fa-file-contract", group: "Asset Management", roles: ["SUPER_ADMIN", "ADMIN", "USER", "IT_ADMIN", "IT_STAFF"] },
+  { key: "assets", label: "Asset (ทรัพย์สิน)", icon: "fa-solid fa-boxes-stacked", group: "Asset Management", roles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN", "IT_STAFF"] },
+  { key: "category", label: "Category (หมวดหมู่)", icon: "fa-solid fa-layer-group", group: "Asset Management", roles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN", "IT_STAFF"] },
+  { key: "qr", label: "Print QR Code", icon: "fa-solid fa-print", group: "Asset Management", roles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN", "IT_STAFF"] },
+  { key: "location", label: "Location (สถานที่)", icon: "fa-solid fa-map-location-dot", group: "Asset Management", roles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN", "IT_STAFF"] },
+  { key: "scan", label: "Scan Office (Offline)", icon: "fa-solid fa-qrcode", group: "Tools & System", accent: "orange", roles: ["SUPER_ADMIN", "ADMIN", "USER", "IT_ADMIN", "IT_STAFF"] },
+  { key: "sync", label: "Sync Data (รับ/ส่ง)", icon: "fa-solid fa-cloud-arrow-up", group: "Tools & System", roles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN", "IT_STAFF"] },
+  { key: "report", label: "Report (รายงาน)", icon: "fa-solid fa-file-invoice", group: "Tools & System", roles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN", "IT_STAFF"] },
+  { key: "settings", label: "Settings (ตั้งค่า)", icon: "fa-solid fa-gear", group: "Admin Zone", roles: ["SUPER_ADMIN", "ADMIN"] },
+  { key: "users", label: "Users (ผู้ใช้งาน)", icon: "fa-solid fa-users-gear", group: "Admin Zone", roles: ["SUPER_ADMIN"] }
 ];
 
 function canView(role: UserRole, roles: UserRole[]) {
@@ -272,7 +272,7 @@ function LoginPanel({ onLogin }: { onLogin: (data: AppData) => void }) {
       <section className="loginPanel" aria-label="Login form">
         <form className="loginCard glassCard" onSubmit={submit}>
           <div className="loginLogo">
-            <div className="smartCube">▦</div>
+            <div className="smartCube"><i className="fa-solid fa-cube" /></div>
             <h1>Smart Track Asset Management</h1>
             <p>ระบบบริหารจัดการทรัพย์สินองค์กร</p>
           </div>
@@ -319,7 +319,7 @@ function Notifications({ data }: { data: AppData }) {
     <div className="notifyBox">
       <button className="notifyButton" type="button" aria-label="การแจ้งเตือน">
         <span>●</span>
-        🔔
+        <i className="fa-solid fa-bell" />
       </button>
       <div className="notifyDropdown">
         <div className="notifyHeader">
@@ -337,209 +337,95 @@ function Notifications({ data }: { data: AppData }) {
   );
 }
 
+function SmartStatCard({ icon, tone, label, value }: { icon: string; tone: string; label: string; value: string | number }) {
+  return (
+    <div className="smartStatCard">
+      <div className={`smartStatIcon ${tone}`}><i className={icon} /></div>
+      <div>
+        <p>{label}</p>
+        <h3>{value}</h3>
+      </div>
+    </div>
+  );
+}
+
 function Dashboard({ data }: { data: AppData }) {
-  const [year, setYear] = useState("all");
-  const [department, setDepartment] = useState("all");
-  const [branch, setBranch] = useState("all");
-  const [status, setStatus] = useState("all");
-
-  const filteredAssets = useMemo(() => {
-    return data.assets.filter((asset) => {
-      const assetYear = purchaseYear(asset.purchaseDate);
-      const assetDepartment = asset.department?.name ?? "";
-      const assetBranch = asset.branch?.name ?? asset.location ?? "";
-      return (
-        (year === "all" || assetYear === year) &&
-        (department === "all" || assetDepartment === department) &&
-        (branch === "all" || assetBranch === branch) &&
-        (status === "all" || asset.status === status)
-      );
-    });
-  }, [branch, data.assets, department, status, year]);
-
-  const budgetByYear = data.dashboard.assetsByYear;
-  const maxAssets = Math.max(...budgetByYear.map((item) => item.total), 1);
-  const maxBudget = Math.max(...budgetByYear.map((item) => item.budget), 1);
-  const statusTotal = data.dashboard.statusCounts.reduce((sum, item) => sum + item.count, 0) || 1;
   const totalValue = data.assets.reduce((sum, asset) => sum + Number(asset.purchasePrice ?? 0), 0);
-  const categorySummary = summarizeBy(data.assets, (asset) => asset.category?.name ?? assetTypeLabel(asset.type)).slice(0, 5);
   const locationSummary = summarizeBy(data.assets, (asset) => asset.branch?.name ?? asset.location ?? "ไม่ระบุสถานที่").slice(0, 5);
   const highValueAssets = [...data.assets].sort((left, right) => Number(right.purchasePrice ?? 0) - Number(left.purchasePrice ?? 0)).slice(0, 5);
+  const companySummary = [
+    { label: "Smart Track Asset Management", count: data.assets.length },
+    { label: "TPB", count: 0 },
+    { label: "TPP WASTE MANAGEMENT CO., LTD.", count: 0 }
+  ];
+  const urgentLost = data.assets.filter((asset) => asset.status === "LOST").length;
+  const urgentRepair = data.assets.filter((asset) => ["REPAIR", "WAITING_REPAIR", "REPAIRING"].includes(asset.status)).length;
 
   return (
-    <section className="dashboardPage">
-      <div className="dashboardHero">
-        <div>
-          <p className="eyebrow">Dashboard</p>
-          <h1>Smart Track Asset Management</h1>
-          <p>ภาพรวมทรัพย์สินองค์กร สถานะ มูลค่า สถานที่ และรายการที่ต้องตรวจสอบ</p>
-        </div>
-        <div className="userPill">
-          <span>{data.user.name}</span>
-          <strong>{roleLabel(data.user.role)}</strong>
-        </div>
+    <section className="smartDashboard">
+      <div className="smartStatsGrid">
+        <SmartStatCard icon="fa-solid fa-box-open" tone="emerald" label="ทรัพย์สินทั้งหมด" value={formatMoney(data.dashboard.assetCount)} />
+        <SmartStatCard icon="fa-solid fa-wallet" tone="blue" label="มูลค่ารวม" value={formatMoney(totalValue)} />
+        <SmartStatCard icon="fa-solid fa-screwdriver-wrench" tone="orange" label="ส่งซ่อม" value={urgentRepair} />
+        <SmartStatCard icon="fa-solid fa-clipboard-check" tone="purple" label="การตรวจนับคงค้าง" value={5} />
       </div>
 
-      <div className="statStrip">
-        <div><span>ทรัพย์สินทั้งหมด</span><strong>{data.dashboard.assetCount}</strong></div>
-        <div><span>มูลค่ารวม</span><strong>{formatMoney(totalValue)}</strong></div>
-        <div><span>ส่งซ่อม / พัง</span><strong>{data.assets.filter((asset) => ["REPAIR", "WAITING_REPAIR", "REPAIRING"].includes(asset.status)).length}</strong></div>
-        <div><span>สูญหาย / จำหน่าย</span><strong>{data.assets.filter((asset) => ["LOST", "DISPOSED", "PENDING_DISPOSAL"].includes(asset.status)).length}</strong></div>
-      </div>
-
-      <div className="dashboardChartsTop">
-        <section className="panel">
-          <div className="panelHeader">
-            <h2>มูลค่าทรัพย์สินแยกตามปี</h2>
-            <p>ยอดใช้จ่ายจริงจากข้อมูลงบประมาณ/ทรัพย์สิน</p>
-          </div>
-          <div className="chartRows">
-            {budgetByYear.length ? budgetByYear.map((item) => (
-              <div className="chartRow" key={item.year}>
-                <div className="barLabel"><strong>{item.year}</strong><span>{formatMoney(item.budget)} บาท</span></div>
-                <div className="barTrack"><span className="barFill canvaFill" style={{ width: `${Math.max(6, (item.budget / maxBudget) * 100)}%` }} /></div>
-              </div>
-            )) : <p className="empty">ยังไม่มีข้อมูลงบประมาณ</p>}
-          </div>
-        </section>
-
-        <section className="panel">
-          <div className="panelHeader">
+      <div className="smartDashboardGrid">
+        <section className="smartPanel statusPanel">
+          <div className="smartPanelHeader">
             <h2>สถานะทรัพย์สินรวม</h2>
-            <p>สัดส่วนสถานะรายการทรัพย์สินในระบบ</p>
+            <span>{formatMoney(data.dashboard.assetCount)} รายการรวม</span>
           </div>
-          <div className="donutWrap">
-            <div className="donut">
-              <strong>{data.dashboard.assetCount}</strong>
-              <span>รายการ</span>
-            </div>
-            <div className="legendList">
-              {data.dashboard.statusCounts.length ? data.dashboard.statusCounts.map((item) => (
-                <div key={item.status}>
-                  <span>{item.label}</span>
-                  <strong>{item.count} ({Math.round((item.count / statusTotal) * 100)}%)</strong>
-                </div>
-              )) : <p className="empty">ยังไม่มีสถานะเครื่อง</p>}
-            </div>
+          <div className="statusList">
+            {(data.dashboard.statusCounts.length ? data.dashboard.statusCounts : [{ status: "ACTIVE", label: "ใช้งานปกติ", count: 0 }]).map((item) => (
+              <div className="statusLine" key={item.status}>
+                <span>{item.label}</span>
+                <strong>{item.count}</strong>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="smartPanel">
+          <div className="smartPanelHeader"><h2>จำนวนแยกตามแผนก (Top 5)</h2></div>
+          <div className="compactList">
+            {(locationSummary.length ? locationSummary : [{ label: "ยังไม่มีข้อมูล", count: 0 }]).map((item) => (
+              <div key={item.label}><span>{item.label}</span><strong>{item.count} ชิ้น</strong></div>
+            ))}
+          </div>
+        </section>
+
+        <section className="smartPanel">
+          <div className="smartPanelHeader"><h2>ทรัพย์สินมูลค่าสูง (Top 5)</h2></div>
+          <div className="compactList">
+            {(highValueAssets.length ? highValueAssets : data.assets.slice(0, 5)).map((asset) => (
+              <div key={asset.id}><span>{asset.assetTag} {asset.name}</span><strong>{formatMoney(asset.purchasePrice)} .-</strong></div>
+            ))}
+            {!data.assets.length ? <div><span>ยังไม่มีรายการทรัพย์สิน</span><strong>0 .-</strong></div> : null}
+          </div>
+        </section>
+
+        <section className="smartPanel">
+          <div className="smartPanelHeader"><h2>ทรัพย์สินแยกตามบริษัท</h2></div>
+          <div className="companyList">
+            {companySummary.map((item) => (
+              <div key={item.label}>
+                <strong>{item.label}</strong>
+                <span>Total Holdings</span>
+                <b>{item.count} ชิ้น</b>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="smartPanel urgentPanel">
+          <div className="smartPanelHeader"><h2>รายการที่ต้องตรวจสอบด่วน</h2></div>
+          <div className="urgentList">
+            <div><span>สูญหาย (Lost)</span><strong>{urgentLost}</strong></div>
+            <div><span>ส่งซ่อม (Repair)</span><strong>{urgentRepair}</strong></div>
           </div>
         </section>
       </div>
-
-      <section className="panel">
-        <div className="panelHeader">
-          <h2>Dashboard Filters</h2>
-          <p>กรองข้อมูลตามปีซื้อ แผนก สาขา และสถานะ</p>
-        </div>
-        <div className="filterGrid">
-          <label>ปีซื้อ
-            <select value={year} onChange={(event) => setYear(event.target.value)}>
-              <option value="all">ทั้งหมด</option>
-              {data.filters.years.map((item) => <option key={item} value={item}>{item}</option>)}
-            </select>
-          </label>
-          <label>แผนก
-            <select value={department} onChange={(event) => setDepartment(event.target.value)}>
-              <option value="all">ทั้งหมด</option>
-              {data.filters.departments.map((item) => <option key={item} value={item}>{item}</option>)}
-            </select>
-          </label>
-          <label>สาขา
-            <select value={branch} onChange={(event) => setBranch(event.target.value)}>
-              <option value="all">ทั้งหมด</option>
-              {data.filters.branches.map((item) => <option key={item} value={item}>{item}</option>)}
-            </select>
-          </label>
-          <label>สถานะ
-            <select value={status} onChange={(event) => setStatus(event.target.value)}>
-              <option value="all">ทั้งหมด</option>
-              {data.filters.statuses.map((item) => <option key={item.status} value={item.status}>{item.label}</option>)}
-            </select>
-          </label>
-          <button className="secondary" onClick={() => { setYear("all"); setDepartment("all"); setBranch("all"); setStatus("all"); }}>ล้าง Filter</button>
-        </div>
-      </section>
-
-      <section className="panel">
-        <div className="panelHeader">
-          <h2>จำนวนเครื่องตามปีที่ซื้อ</h2>
-          <p>แยกเครื่องใช้งาน พัง และว่าง/สต็อก</p>
-        </div>
-        <div className="chartRows">
-          {budgetByYear.length ? budgetByYear.map((item) => (
-            <div className="yearBlock" key={item.year}>
-              <div className="barLabel">
-                <strong>{item.year}</strong>
-                <span>{item.total} เครื่อง | ใช้ {item.inUse} | พัง {item.damaged} | ว่าง {item.spare}</span>
-              </div>
-              <div className="stackBar">
-                <span className="stackUse" style={{ width: `${Math.max(0, (item.inUse / maxAssets) * 100)}%` }} />
-                <span className="stackBad" style={{ width: `${Math.max(0, (item.damaged / maxAssets) * 100)}%` }} />
-                <span className="stackFree" style={{ width: `${Math.max(0, (item.spare / maxAssets) * 100)}%` }} />
-              </div>
-            </div>
-          )) : <p className="empty">ยังไม่มีข้อมูลตามปีซื้อ</p>}
-        </div>
-      </section>
-
-      <div className="moduleGrid wideModuleGrid">
-        <PlaceholderPanel title="จำนวนแยกตามหมวดหมู่ (Top 5)" description="กลุ่มทรัพย์สินที่มีจำนวนสูงสุด">
-          <div className="recordList">
-            {categorySummary.length ? categorySummary.map((item) => (
-              <div className="recordItem" key={item.label}>
-                <strong>{item.label}</strong>
-                <span>{item.count} รายการ</span>
-              </div>
-            )) : <p className="empty">ยังไม่มีข้อมูลหมวดหมู่</p>}
-          </div>
-        </PlaceholderPanel>
-        <PlaceholderPanel title="ทรัพย์สินมูลค่าสูง (Top 5)" description="เรียงตามราคาซื้อจากมากไปน้อย">
-          <div className="recordList">
-            {highValueAssets.length ? highValueAssets.map((asset) => (
-              <div className="recordItem" key={asset.id}>
-                <strong>{asset.assetTag} {asset.name}</strong>
-                <span>{formatMoney(asset.purchasePrice)} บาท</span>
-              </div>
-            )) : <p className="empty">ยังไม่มีข้อมูลราคา</p>}
-          </div>
-        </PlaceholderPanel>
-      </div>
-
-      <PlaceholderPanel title="ทรัพย์สินแยกตามสถานที่" description="สรุปจำนวนทรัพย์สินตาม Location">
-        <div className="chartRows">
-          {locationSummary.length ? locationSummary.map((item) => (
-            <div className="chartRow" key={item.label}>
-              <div className="barLabel"><strong>{item.label}</strong><span>{item.count} รายการ</span></div>
-              <div className="barTrack"><span className="barFill" style={{ width: `${Math.max(6, (item.count / Math.max(data.dashboard.assetCount, 1)) * 100)}%` }} /></div>
-            </div>
-          )) : <p className="empty">ยังไม่มีข้อมูลสถานที่</p>}
-        </div>
-      </PlaceholderPanel>
-
-      <section className="panel">
-        <div className="panelHeader">
-          <h2>รายการตาม Filter</h2>
-          <p>พบ {filteredAssets.length} รายการ</p>
-        </div>
-        <div className="tableWrap">
-          <table>
-            <thead>
-              <tr><th>Asset</th><th>User</th><th>Location</th><th>Years</th><th>Status</th><th>Brand / Model</th></tr>
-            </thead>
-            <tbody>
-              {filteredAssets.slice(0, 12).map((asset) => (
-                <tr key={asset.id}>
-                  <td><strong>{asset.assetTag}</strong><br /><span className="small">{asset.name}</span></td>
-                  <td>{asset.assignedTo ?? "-"}</td>
-                  <td>{asset.branch?.name ?? asset.location ?? "-"}</td>
-                  <td>{purchaseYear(asset.purchaseDate) || "-"}</td>
-                  <td><span className="badge">{asset.status}</span></td>
-                  <td>{asset.manufacturer ?? "-"} {asset.model ?? ""}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
     </section>
   );
 }
@@ -777,15 +663,38 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
   }
 
   return (
-    <section className="panel">
-      <div className="panelHeader assetListHeader">
+    <section className="smartAssetPage">
+      <div className="smartPageHeader">
         <div>
           <h2>ทะเบียนทรัพย์สิน</h2>
-          <p>รายการทรัพย์สินทั้งหมด ค้นหา เพิ่มใหม่ และเตรียมต่อยอด Import/QR</p>
+          <p>Global View</p>
         </div>
-        <button type="button" onClick={() => setShowForm((value) => !value)}>
-          {showForm ? "ปิดฟอร์ม" : "เพิ่มใหม่"}
-        </button>
+        <div className="assetToolbar">
+          <button className="tabButton active" type="button"><i className="fa-solid fa-list" /> รายการ</button>
+          <button className="tabButton" type="button"><i className="fa-solid fa-map" /> แผนที่</button>
+          <button className="tabButton" type="button"><i className="fa-solid fa-file-import" /> Import</button>
+          <button type="button" onClick={() => setShowForm((value) => !value)}>
+            <i className="fa-solid fa-plus" /> {showForm ? "ปิดฟอร์ม" : "เพิ่มใหม่"}
+          </button>
+        </div>
+      </div>
+      <div className="smartFilterBar">
+        <label>ค้นหา<input placeholder="รหัส / ชื่อรายการทรัพย์สิน" /></label>
+        <label>สถานที่
+          <select defaultValue="">
+            <option value="">ทั้งหมด</option>
+            {data.masterData.branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
+          </select>
+        </label>
+        <label>บริษัท
+          <select defaultValue="">
+            <option value="">-- ทุกบริษัท --</option>
+            <option>Smart Track Asset Management</option>
+            <option>TPB</option>
+            <option>TPP WASTE MANAGEMENT CO., LTD.</option>
+          </select>
+        </label>
+        <button className="filterButton" type="button">กรอง</button>
       </div>
       {showForm ? (
         <form className="assetCreateForm" onSubmit={createAsset}>
@@ -827,8 +736,47 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
       ) : null}
       {message ? <p className="notice assetInlineNotice">{message}</p> : null}
       {data.assets.length > 0 ? (
-      <div className="tableWrap">
-        <table className="assetReportTable">
+      <div className="smartTableWrap">
+        <table className="smartAssetTable">
+          <thead>
+            <tr>
+              <th>รูป</th>
+              <th>รหัส / ชื่อรายการทรัพย์สิน</th>
+              <th>บริษัท</th>
+              <th>สถานที่ / แผนก</th>
+              <th>ผู้รับผิดชอบ</th>
+              <th>ราคา</th>
+              <th>สถานะ</th>
+              <th>จัดการ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.assets.map((asset) => (
+              <tr key={asset.id}>
+                <td><div className="assetThumb"><i className="fa-solid fa-box" /></div></td>
+                <td><strong>{asset.assetTag}</strong><br /><span>{asset.name}</span></td>
+                <td>Smart Track Asset Management</td>
+                <td>{asset.branch?.name ?? asset.location ?? "-"}<br /><span>{asset.department?.name ?? "-"}</span></td>
+                <td>{asset.assignedTo ?? "-"}</td>
+                <td>{formatMoney(asset.purchasePrice)}<br /><span>BV: {formatMoney(asset.purchasePrice)}</span></td>
+                <td><span className="smartStatus">{statusLabel(asset.status)}</span></td>
+                <td><button className="iconButton" type="button"><i className="fa-solid fa-pen" /></button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      ) : showForm ? (
+        <p className="empty">ยังไม่มีรายการ Asset หลังบันทึกข้อมูลแรก ตารางจะแสดงที่นี่</p>
+      ) : (
+        <div className="smartEmptyAsset">
+          <i className="fa-solid fa-box-open" />
+          <strong>ยังไม่มีรายการทรัพย์สิน</strong>
+          <span>กดปุ่มเพิ่มใหม่เพื่อเริ่มสร้างข้อมูลทรัพย์สินในระบบ</span>
+        </div>
+      )}
+      <div className="hiddenLegacyTable" aria-hidden="true">
+        <table>
           <thead>
             <tr>
               <th>No.</th>
@@ -846,30 +794,9 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
               <th>Price</th>
             </tr>
           </thead>
-          <tbody>
-            {data.assets.map((asset, index) => (
-              <tr key={asset.id}>
-                <td>{index + 1}</td>
-                <td><strong>{asset.assetTag}</strong><br /><span className="small">{asset.name}</span></td>
-                <td>{asset.assetAcc ?? "-"}</td>
-                <td>{asset.serialNumber ?? "-"}</td>
-                <td>{asset.assignedTo ?? "-"}</td>
-                <td>{asset.userPosition ?? "-"}</td>
-                <td>{asset.branch?.name ?? asset.location ?? "-"}</td>
-                <td>{purchaseYear(asset.purchaseDate) || "-"}</td>
-                <td><span className="badge">{statusLabel(asset.status)}</span></td>
-                <td>{asset.brand?.name ?? asset.manufacturer ?? "-"}</td>
-                <td>{asset.model ?? "-"}</td>
-                <td>{asset.notes ?? "-"}</td>
-                <td>{formatMoney(asset.purchasePrice)}</td>
-              </tr>
-            ))}
-          </tbody>
+          <tbody />
         </table>
       </div>
-      ) : showForm ? (
-        <p className="empty">ยังไม่มีรายการ Asset หลังบันทึกข้อมูลแรก ตารางจะแสดงที่นี่</p>
-      ) : null}
     </section>
   );
 }
@@ -1421,7 +1348,7 @@ export default function ItsmConsole() {
     <main className="appShell">
       <aside className="sidebar">
         <div className="brandBlock">
-          <div className="brandIcon">▦</div>
+          <div className="brandIcon"><i className="fa-solid fa-cube" /></div>
           <div>
             <strong>U Smart <span>Track</span></strong>
             <small>Asset Manager</small>
@@ -1438,7 +1365,7 @@ export default function ItsmConsole() {
                   className={`${activeMenu === item.key ? "active navButton" : "navButton"} ${item.accent === "orange" ? "orangeNav" : ""}`}
                   onClick={() => setActive(item.key)}
                 >
-                  <span className="navIcon">{item.icon}</span>
+                  <i className={`${item.icon} navIcon`} />
                   <span>{item.label}</span>
                 </button>
               </div>
@@ -1460,13 +1387,13 @@ export default function ItsmConsole() {
       <section className="page">
         <header className="smartTopbar">
           <div className="mobileBrand">
-            <span className="miniCube">▦</span>
+            <span className="miniCube"><i className="fa-solid fa-cube" /></span>
             <strong>U Smart Track</strong>
           </div>
           <div className="topbarActions">
-            <span className="dateLabel">📅 {TodayLabel()}</span>
+            <span className="dateLabel"><i className="fa-regular fa-calendar" /> {TodayLabel()}</span>
             <Notifications data={data} />
-            <button className="scanButton" type="button" onClick={() => setActive("scan")}>📷 Scan</button>
+            <button className="scanButton" type="button" onClick={() => setActive("scan")}><i className="fa-solid fa-camera" /> Scan</button>
           </div>
         </header>
         {activeMenu === "dashboard" ? <Dashboard data={data} /> : null}
