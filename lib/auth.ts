@@ -163,15 +163,6 @@ async function ensureUser(username: string, password: string, roleId: string, na
 }
 
 export async function ensureDefaultUsers() {
-  const [adminRole, hrRole, itRole] = await Promise.all([
-    ensureRole("SUPER_ADMIN", "Full system access"),
-    ensureRole("HR", "HR onboarding and offboarding requests"),
-    ensureRole("IT_ADMIN", "IT asset and workflow administration")
-  ]);
-
-  await Promise.all([
-    ensureUser("administrator", "Wdc@2026", adminRole.id, "Administrator"),
-    ensureUser("userhr", "wdc@1234", hrRole.id, "HR User"),
-    ensureUser("userit", "wdc@1234", itRole.id, "IT User")
-  ]);
+  const adminRole = await ensureRole("SUPER_ADMIN", "Full system access");
+  await ensureUser("admin", "password", adminRole.id, "ผู้ดูแลระบบ");
 }

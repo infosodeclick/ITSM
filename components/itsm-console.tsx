@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
-type UserRole = "SUPER_ADMIN" | "IT_ADMIN" | "IT_STAFF" | "HR" | "MANAGER" | "VIEWER";
+type UserRole = "SUPER_ADMIN" | "ADMIN" | "USER" | "IT_ADMIN" | "IT_STAFF" | "HR" | "MANAGER" | "VIEWER";
 
 type AppUser = {
   id: string;
@@ -110,17 +110,33 @@ type AppData = {
   movements: Array<{ id: string; type: string; assetName: string | null; toHolder: string | null; movedAt: string }>;
 };
 
-type MenuKey = "dashboard" | "assets" | "newEmployee" | "transfer" | "return" | "audit" | "masterData" | "users";
+type MenuKey =
+  | "dashboard"
+  | "map"
+  | "assets"
+  | "documents"
+  | "category"
+  | "qr"
+  | "location"
+  | "scan"
+  | "sync"
+  | "report"
+  | "settings"
+  | "users";
 
 const menuItems: Array<{ key: MenuKey; label: string; roles: UserRole[] }> = [
-  { key: "dashboard", label: "แดชบอร์ด", roles: ["SUPER_ADMIN", "IT_ADMIN", "IT_STAFF", "HR"] },
-  { key: "assets", label: "Assets", roles: ["SUPER_ADMIN", "IT_ADMIN", "IT_STAFF"] },
-  { key: "newEmployee", label: "New Employee Request", roles: ["SUPER_ADMIN", "IT_ADMIN", "IT_STAFF", "HR"] },
-  { key: "transfer", label: "Assign / Transfer", roles: ["SUPER_ADMIN", "IT_ADMIN", "IT_STAFF"] },
-  { key: "return", label: "Return", roles: ["SUPER_ADMIN", "IT_ADMIN", "IT_STAFF"] },
-  { key: "audit", label: "Audit Log", roles: ["SUPER_ADMIN", "IT_ADMIN", "IT_STAFF", "HR"] },
-  { key: "masterData", label: "Master Data", roles: ["SUPER_ADMIN", "IT_ADMIN", "IT_STAFF"] },
-  { key: "users", label: "Users & Roles", roles: ["SUPER_ADMIN"] }
+  { key: "dashboard", label: "Dashboard", roles: ["SUPER_ADMIN", "ADMIN", "USER", "IT_ADMIN", "IT_STAFF", "HR"] },
+  { key: "map", label: "Map View (แผนที่)", roles: ["SUPER_ADMIN", "ADMIN", "USER", "IT_ADMIN", "IT_STAFF", "HR"] },
+  { key: "assets", label: "Asset Management", roles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN", "IT_STAFF"] },
+  { key: "documents", label: "Document (ตรวจนับ)", roles: ["SUPER_ADMIN", "ADMIN", "USER", "IT_ADMIN", "IT_STAFF"] },
+  { key: "category", label: "Category (หมวดหมู่)", roles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN", "IT_STAFF"] },
+  { key: "qr", label: "Print QR Code", roles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN", "IT_STAFF"] },
+  { key: "location", label: "Location (สถานที่)", roles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN", "IT_STAFF"] },
+  { key: "scan", label: "Scan Office (Offline)", roles: ["SUPER_ADMIN", "ADMIN", "USER", "IT_ADMIN", "IT_STAFF"] },
+  { key: "sync", label: "Sync Data (รับ/ส่ง)", roles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN", "IT_STAFF"] },
+  { key: "report", label: "Report (รายงาน)", roles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN", "IT_STAFF"] },
+  { key: "settings", label: "Settings (ตั้งค่า)", roles: ["SUPER_ADMIN", "ADMIN"] },
+  { key: "users", label: "Users (ผู้ใช้งาน)", roles: ["SUPER_ADMIN"] }
 ];
 
 function canView(role: UserRole, roles: UserRole[]) {
@@ -140,6 +156,8 @@ function purchaseYear(value: string | null) {
 function roleLabel(role?: UserRole) {
   const labels: Partial<Record<UserRole, string>> = {
     SUPER_ADMIN: "Admin",
+    ADMIN: "Admin",
+    USER: "User",
     IT_ADMIN: "IT",
     IT_STAFF: "IT",
     HR: "HR",
@@ -171,6 +189,8 @@ const assetTypeOptions = [
   ["MONITOR", "Monitor"],
   ["PRINTER", "Printer"],
   ["NETWORK", "Network"],
+  ["CCTV", "CCTV"],
+  ["SOFTWARE", "Software"],
   ["OTHER", "Other"]
 ] as const;
 
@@ -182,6 +202,8 @@ const assetTypePrefixes: Record<string, string> = {
   MONITOR: "MON",
   PRINTER: "PRN",
   NETWORK: "NET",
+  CCTV: "CCTV",
+  SOFTWARE: "SW",
   OTHER: "OTH"
 };
 
@@ -197,8 +219,19 @@ function fallbackTypeName(type: string) {
   return assetTypeLabel(type);
 }
 
+function summarizeBy<T>(items: T[], getLabel: (item: T) => string) {
+  const counts = new Map<string, number>();
+  for (const item of items) {
+    const label = getLabel(item) || "ไม่ระบุ";
+    counts.set(label, (counts.get(label) ?? 0) + 1);
+  }
+  return Array.from(counts.entries())
+    .map(([label, count]) => ({ label, count }))
+    .sort((left, right) => right.count - left.count || left.label.localeCompare(right.label));
+}
+
 function LoginPanel({ onLogin }: { onLogin: (data: AppData) => void }) {
-  const [username, setUsername] = useState("administrator");
+  const [username, setUsername] = useState("admin");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -234,11 +267,11 @@ function LoginPanel({ onLogin }: { onLogin: (data: AppData) => void }) {
 
   return (
     <main className="loginPage">
-      <section className="loginVisual" aria-label="IT Service Management">
+      <section className="loginVisual" aria-label="Smart Track Asset Management">
         <div className="loginBrand">
-          <span>IT Service Management</span>
-          <h1>จัดการงาน IT และทรัพย์สินในที่เดียว</h1>
-          <p>Dashboard, Assets, HR Request, Transfer, Return, Audit Log และ Users & Roles พร้อมต่อยอดทีละระบบ</p>
+          <span>Smart Track</span>
+          <h1>Smart Track Asset Management</h1>
+          <p>ระบบบริหารจัดการทรัพย์สินองค์กร ตรวจนับ สแกน QR และออกรายงานในที่เดียว</p>
         </div>
       </section>
       <section className="loginPanel" aria-label="Login form">
@@ -246,7 +279,7 @@ function LoginPanel({ onLogin }: { onLogin: (data: AppData) => void }) {
           <div>
             <p className="eyebrow">Secure Access</p>
             <h2>เข้าสู่ระบบ</h2>
-            <p>ใช้บัญชีที่ได้รับสิทธิ์เพื่อเข้าใช้งานระบบ ITSM</p>
+            <p>ใช้บัญชีผู้ดูแลระบบเพื่อเข้าใช้งาน Smart Track</p>
           </div>
           <label>
             Username
@@ -293,14 +326,18 @@ function Dashboard({ data }: { data: AppData }) {
   const maxAssets = Math.max(...budgetByYear.map((item) => item.total), 1);
   const maxBudget = Math.max(...budgetByYear.map((item) => item.budget), 1);
   const statusTotal = data.dashboard.statusCounts.reduce((sum, item) => sum + item.count, 0) || 1;
+  const totalValue = data.assets.reduce((sum, asset) => sum + Number(asset.purchasePrice ?? 0), 0);
+  const categorySummary = summarizeBy(data.assets, (asset) => asset.category?.name ?? assetTypeLabel(asset.type)).slice(0, 5);
+  const locationSummary = summarizeBy(data.assets, (asset) => asset.branch?.name ?? asset.location ?? "ไม่ระบุสถานที่").slice(0, 5);
+  const highValueAssets = [...data.assets].sort((left, right) => Number(right.purchasePrice ?? 0) - Number(left.purchasePrice ?? 0)).slice(0, 5);
 
   return (
     <section className="dashboardPage">
       <div className="dashboardHero">
         <div>
           <p className="eyebrow">Dashboard</p>
-          <h1>ภาพรวม IT Service Management</h1>
-          <p>ดูจำนวนพนักงาน อุปกรณ์ Warranty สถานะเครื่อง และงบประมาณแยกตามปี</p>
+          <h1>Smart Track Asset Management</h1>
+          <p>ภาพรวมทรัพย์สินองค์กร สถานะ มูลค่า สถานที่ และรายการที่ต้องตรวจสอบ</p>
         </div>
         <div className="userPill">
           <span>{data.user.name}</span>
@@ -309,17 +346,17 @@ function Dashboard({ data }: { data: AppData }) {
       </div>
 
       <div className="statStrip">
-        <div><span>พนักงาน</span><strong>{data.dashboard.employeeCount}</strong></div>
-        <div><span>อุปกรณ์ IT</span><strong>{data.dashboard.assetCount}</strong></div>
-        <div><span>หมดประกัน</span><strong>{data.dashboard.expiredWarranty}</strong></div>
-        <div><span>เหลือประกัน</span><strong>{data.dashboard.coveredWarranty}</strong></div>
+        <div><span>ทรัพย์สินทั้งหมด</span><strong>{data.dashboard.assetCount}</strong></div>
+        <div><span>มูลค่ารวม</span><strong>{formatMoney(totalValue)}</strong></div>
+        <div><span>ส่งซ่อม / พัง</span><strong>{data.assets.filter((asset) => ["REPAIR", "WAITING_REPAIR", "REPAIRING"].includes(asset.status)).length}</strong></div>
+        <div><span>สูญหาย / จำหน่าย</span><strong>{data.assets.filter((asset) => ["LOST", "DISPOSED", "PENDING_DISPOSAL"].includes(asset.status)).length}</strong></div>
       </div>
 
       <div className="dashboardChartsTop">
         <section className="panel">
           <div className="panelHeader">
-            <h2>งบประมาณทรัพย์สิน IT แยกตามปี</h2>
-            <p>ยอด actual spending จากตาราง Budget</p>
+            <h2>มูลค่าทรัพย์สินแยกตามปี</h2>
+            <p>ยอดใช้จ่ายจริงจากข้อมูลงบประมาณ/ทรัพย์สิน</p>
           </div>
           <div className="chartRows">
             {budgetByYear.length ? budgetByYear.map((item) => (
@@ -333,13 +370,13 @@ function Dashboard({ data }: { data: AppData }) {
 
         <section className="panel">
           <div className="panelHeader">
-            <h2>สถานะเครื่อง</h2>
-            <p>สัดส่วนสถานะอุปกรณ์ในระบบ</p>
+            <h2>สถานะทรัพย์สินรวม</h2>
+            <p>สัดส่วนสถานะรายการทรัพย์สินในระบบ</p>
           </div>
           <div className="donutWrap">
             <div className="donut">
               <strong>{data.dashboard.assetCount}</strong>
-              <span>เครื่อง</span>
+              <span>รายการ</span>
             </div>
             <div className="legendList">
               {data.dashboard.statusCounts.length ? data.dashboard.statusCounts.map((item) => (
@@ -409,6 +446,40 @@ function Dashboard({ data }: { data: AppData }) {
         </div>
       </section>
 
+      <div className="moduleGrid wideModuleGrid">
+        <PlaceholderPanel title="จำนวนแยกตามหมวดหมู่ (Top 5)" description="กลุ่มทรัพย์สินที่มีจำนวนสูงสุด">
+          <div className="recordList">
+            {categorySummary.length ? categorySummary.map((item) => (
+              <div className="recordItem" key={item.label}>
+                <strong>{item.label}</strong>
+                <span>{item.count} รายการ</span>
+              </div>
+            )) : <p className="empty">ยังไม่มีข้อมูลหมวดหมู่</p>}
+          </div>
+        </PlaceholderPanel>
+        <PlaceholderPanel title="ทรัพย์สินมูลค่าสูง (Top 5)" description="เรียงตามราคาซื้อจากมากไปน้อย">
+          <div className="recordList">
+            {highValueAssets.length ? highValueAssets.map((asset) => (
+              <div className="recordItem" key={asset.id}>
+                <strong>{asset.assetTag} {asset.name}</strong>
+                <span>{formatMoney(asset.purchasePrice)} บาท</span>
+              </div>
+            )) : <p className="empty">ยังไม่มีข้อมูลราคา</p>}
+          </div>
+        </PlaceholderPanel>
+      </div>
+
+      <PlaceholderPanel title="ทรัพย์สินแยกตามสถานที่" description="สรุปจำนวนทรัพย์สินตาม Location">
+        <div className="chartRows">
+          {locationSummary.length ? locationSummary.map((item) => (
+            <div className="chartRow" key={item.label}>
+              <div className="barLabel"><strong>{item.label}</strong><span>{item.count} รายการ</span></div>
+              <div className="barTrack"><span className="barFill" style={{ width: `${Math.max(6, (item.count / Math.max(data.dashboard.assetCount, 1)) * 100)}%` }} /></div>
+            </div>
+          )) : <p className="empty">ยังไม่มีข้อมูลสถานที่</p>}
+        </div>
+      </PlaceholderPanel>
+
       <section className="panel">
         <div className="panelHeader">
           <h2>รายการตาม Filter</h2>
@@ -447,6 +518,166 @@ function PlaceholderPanel({ title, description, children }: { title: string; des
       </div>
       <div className="moduleBody">{children ?? <p className="moduleNote">หน้ารายละเอียดจะทำต่อเป็น feature แยก เพื่อไม่ให้กระทบระบบหลัก</p>}</div>
     </section>
+  );
+}
+
+function MapViewPage({ data }: { data: AppData }) {
+  const locationSummary = summarizeBy(data.assets, (asset) => asset.branch?.name ?? asset.location ?? "ไม่ระบุสถานที่");
+  return (
+    <section className="dashboardPage">
+      <div className="dashboardHero">
+        <div>
+          <p className="eyebrow">Map View</p>
+          <h1>แผนที่ทรัพย์สิน</h1>
+          <p>แสดงจำนวนทรัพย์สินตามสถานที่ เพื่อเตรียมต่อยอดเป็นแผนที่จริงและพิกัด GPS</p>
+        </div>
+      </div>
+      <PlaceholderPanel title={`ทรัพย์สินบนแผนที่ ${data.assets.length} รายการ`} description={`${locationSummary.length} สถานที่`}>
+        <div className="locationGrid">
+          {locationSummary.length ? locationSummary.map((item) => (
+            <div className="locationCard" key={item.label}>
+              <strong>{item.label}</strong>
+              <span>{item.count} Assets</span>
+            </div>
+          )) : <p className="empty">ยังไม่มีข้อมูลทรัพย์สินตามสถานที่</p>}
+        </div>
+      </PlaceholderPanel>
+    </section>
+  );
+}
+
+function DocumentsPage({ data }: { data: AppData }) {
+  return (
+    <PlaceholderPanel title="เอกสารตรวจนับ" description="จัดการรอบการตรวจนับทรัพย์สิน">
+      <div className="recordList">
+        <div className="recordItem">
+          <strong>DOC-{new Date().getFullYear()}-0001</strong>
+          <span>เอกสารตรวจนับเริ่มต้น | Assets {data.assets.length} รายการ | สถานะ Draft</span>
+        </div>
+      </div>
+    </PlaceholderPanel>
+  );
+}
+
+function CategoryPage({ data }: { data: AppData }) {
+  const categorySummary = summarizeBy(data.assets, (asset) => asset.category?.name ?? assetTypeLabel(asset.type));
+  const fallbackCategories = data.masterData.assetTypes.map((type) => ({ label: type.name, count: 0 }));
+  const rows = categorySummary.length ? categorySummary : fallbackCategories;
+  return (
+    <PlaceholderPanel title="หมวดหมู่ทรัพย์สิน (Category)" description={`Total Category: ${rows.length}`}>
+      <div className="tableWrap">
+        <table>
+          <thead><tr><th>หมวดหมู่</th><th>จำนวนทรัพย์สิน</th><th>จัดการ</th></tr></thead>
+          <tbody>
+            {rows.map((item) => (
+              <tr key={item.label}>
+                <td>{item.label}</td>
+                <td>{item.count} Assets</td>
+                <td><span className="badge">ดูรายการทรัพย์สิน</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </PlaceholderPanel>
+  );
+}
+
+function LocationPage({ data }: { data: AppData }) {
+  const assetCountByLocation = new Map(summarizeBy(data.assets, (asset) => asset.branch?.name ?? asset.location ?? "ไม่ระบุ").map((item) => [item.label, item.count]));
+  return (
+    <PlaceholderPanel title="ข้อมูลสถานที่ (Location)" description="กำหนดสถานที่และดูจำนวนทรัพย์สินในแต่ละจุด">
+      <div className="tableWrap">
+        <table>
+          <thead><tr><th>Code</th><th>Location</th><th>พิกัด</th><th>Assets</th></tr></thead>
+          <tbody>
+            {data.masterData.branches.map((branch) => (
+              <tr key={branch.id}>
+                <td>{branch.code}</td>
+                <td>{branch.name}</td>
+                <td>ยังไม่ระบุพิกัด</td>
+                <td>{assetCountByLocation.get(branch.name) ?? 0}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </PlaceholderPanel>
+  );
+}
+
+function QrCodePage({ data }: { data: AppData }) {
+  return (
+    <PlaceholderPanel title="พิมพ์สติ๊กเกอร์ QR Code" description="เลือกรายการทรัพย์สินเพื่อพิมพ์ QR Code">
+      <div className="tableWrap">
+        <table>
+          <thead><tr><th>เลือก</th><th>รหัส</th><th>Asset</th><th>Location</th><th>Status</th></tr></thead>
+          <tbody>
+            {data.assets.slice(0, 50).map((asset) => (
+              <tr key={asset.id}>
+                <td><input type="checkbox" aria-label={`เลือก ${asset.assetTag}`} /></td>
+                <td>{asset.assetTag}</td>
+                <td>{asset.name}</td>
+                <td>{asset.branch?.name ?? asset.location ?? "-"}</td>
+                <td>{statusLabel(asset.status)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </PlaceholderPanel>
+  );
+}
+
+function ScanPage() {
+  return (
+    <PlaceholderPanel title="ตรวจสอบข้อมูลทรัพย์สิน" description="สแกน QR Code เพื่อดูรายละเอียดสถานะและตำแหน่ง">
+      <div className="scanBox">
+        <strong>กำลังเตรียมระบบสแกน...</strong>
+        <span>ขั้นถัดไปจะเชื่อมกล้องมือถือและ QR lookup ตามรหัสทรัพย์สิน</span>
+      </div>
+    </PlaceholderPanel>
+  );
+}
+
+function SyncPage() {
+  return (
+    <PlaceholderPanel title="รับ/ส่ง ข้อมูล (Sync Offline)" description="จัดการข้อมูลเพื่อใช้งานตรวจนับผ่าน Mobile App">
+      <div className="moduleGrid">
+        <div className="recordItem">
+          <strong>ดาวน์โหลด Master Data</strong>
+          <span>ส่งออกข้อมูลทรัพย์สิน สถานที่ และหมวดหมู่เป็น JSON</span>
+        </div>
+        <div className="recordItem">
+          <strong>อัปโหลดผลการตรวจนับ</strong>
+          <span>นำผลสแกนจากมือถือกลับเข้าสู่ระบบ</span>
+        </div>
+      </div>
+    </PlaceholderPanel>
+  );
+}
+
+function ReportPage({ data }: { data: AppData }) {
+  return (
+    <PlaceholderPanel title="ระบบรายงานทรัพย์สิน" description="รายงานผลตรวจนับ ทรัพย์สินรายสถานที่ และประวัติการโอนย้าย">
+      <div className="statStrip">
+        <div><span>Assets</span><strong>{data.assets.length}</strong></div>
+        <div><span>Locations</span><strong>{data.masterData.branches.length}</strong></div>
+        <div><span>Movements</span><strong>{data.movements.length}</strong></div>
+        <div><span>Users</span><strong>{data.users.length}</strong></div>
+      </div>
+      <div className="tableWrap">
+        <table>
+          <thead><tr><th>รายงาน</th><th>รายละเอียด</th><th>สถานะ</th></tr></thead>
+          <tbody>
+            <tr><td>รายงานผลตรวจนับ</td><td>ตรวจนับตาม Location / Document</td><td><span className="badge">พร้อมต่อยอด</span></td></tr>
+            <tr><td>ทรัพย์สินรายสถานที่</td><td>สรุปจำนวนและมูลค่าตาม Location</td><td><span className="badge">พร้อมต่อยอด</span></td></tr>
+            <tr><td>ประวัติการโอนย้าย</td><td>รายการ Assign / Transfer / Return</td><td><span className="badge">พร้อมต่อยอด</span></td></tr>
+            <tr><td>ทรัพย์สินหาย/จำหน่าย</td><td>Lost, Write-off, Disposed</td><td><span className="badge">พร้อมต่อยอด</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </PlaceholderPanel>
   );
 }
 
@@ -514,11 +745,11 @@ function AssetsPage({ data, onRefresh }: { data: AppData; onRefresh: (data: AppD
     <section className="panel">
       <div className="panelHeader assetListHeader">
         <div>
-          <h2>Assets</h2>
-          <p>รายการทรัพย์สิน IT ตามรูปแบบรายงานหลัก</p>
+          <h2>ทะเบียนทรัพย์สิน</h2>
+          <p>รายการทรัพย์สินทั้งหมด ค้นหา เพิ่มใหม่ และเตรียมต่อยอด Import/QR</p>
         </div>
         <button type="button" onClick={() => setShowForm((value) => !value)}>
-          {showForm ? "ปิดฟอร์ม" : "เพิ่ม Assets"}
+          {showForm ? "ปิดฟอร์ม" : "เพิ่มใหม่"}
         </button>
       </div>
       {showForm ? (
@@ -642,9 +873,9 @@ function MasterDataPage({ data, onRefresh }: { data: AppData; onRefresh: (data: 
     <section className="dashboardPage">
       <div className="dashboardHero">
         <div>
-          <p className="eyebrow">Master Data</p>
-          <h1>Master Data</h1>
-          <p>จัดการ Location, ประเภท และ Brand ที่ใช้ในหน้า Assets</p>
+          <p className="eyebrow">Settings</p>
+          <h1>ตั้งค่าองค์กรและระบบ</h1>
+          <p>จัดการ Location, Category, Brand และข้อมูลหลักสำหรับระบบ Smart Track</p>
         </div>
       </div>
       {message ? <p className="notice">{message}</p> : null}
@@ -1140,7 +1371,7 @@ export default function ItsmConsole() {
   }
 
   if (loading) {
-    return <main className="blankPage"><section><p>Loading ITSM...</p></section></main>;
+    return <main className="blankPage"><section><p>Loading Smart Track...</p></section></main>;
   }
 
   if (!data) {
@@ -1154,8 +1385,8 @@ export default function ItsmConsole() {
     <main className="appShell">
       <aside className="sidebar">
         <div className="brandBlock">
-          <span>WDC</span>
-          <strong>ITSM</strong>
+          <span>U Smart Track</span>
+          <strong>Asset Manager</strong>
         </div>
         <nav className="navList" aria-label="Main menu">
           {visibleMenu.map((item) => (
@@ -1172,41 +1403,16 @@ export default function ItsmConsole() {
       </aside>
       <section className="page">
         {activeMenu === "dashboard" ? <Dashboard data={data} /> : null}
+        {activeMenu === "map" ? <MapViewPage data={data} /> : null}
         {activeMenu === "assets" ? <AssetsPage data={data} onRefresh={setData} /> : null}
-        {activeMenu === "newEmployee" ? <NewEmployeeRequestPage data={data} onRefresh={setData} /> : null}
-        {activeMenu === "transfer" ? (
-          <PlaceholderPanel title="Assign / Transfer" description="ส่งมอบหรือโอนย้ายอุปกรณ์">
-            <div className="recordList">
-              {data.movements.map((movement) => (
-                <div className="recordItem" key={movement.id}>
-                  <strong>{movement.assetName ?? movement.type}</strong>
-                  <span>{movement.toHolder ?? "-"} | {new Date(movement.movedAt).toLocaleDateString("th-TH")}</span>
-                </div>
-              ))}
-            </div>
-          </PlaceholderPanel>
-        ) : null}
-        {activeMenu === "return" ? <PlaceholderPanel title="Return" description="รับคืนอุปกรณ์จากพนักงาน" /> : null}
-        {activeMenu === "audit" ? (
-          <PlaceholderPanel title="Audit Log" description="ตรวจสอบประวัติการใช้งานระบบ">
-            <div className="tableWrap">
-              <table>
-                <thead><tr><th>เวลา</th><th>Module</th><th>Action</th><th>Status</th></tr></thead>
-                <tbody>
-                  {data.auditLogs.map((log) => (
-                    <tr key={log.id}>
-                      <td>{new Date(log.createdAt).toLocaleString("th-TH")}</td>
-                      <td>{log.module}</td>
-                      <td>{log.action}</td>
-                      <td>{log.status}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </PlaceholderPanel>
-        ) : null}
-        {activeMenu === "masterData" ? <MasterDataPage data={data} onRefresh={setData} /> : null}
+        {activeMenu === "documents" ? <DocumentsPage data={data} /> : null}
+        {activeMenu === "category" ? <CategoryPage data={data} /> : null}
+        {activeMenu === "qr" ? <QrCodePage data={data} /> : null}
+        {activeMenu === "location" ? <LocationPage data={data} /> : null}
+        {activeMenu === "scan" ? <ScanPage /> : null}
+        {activeMenu === "sync" ? <SyncPage /> : null}
+        {activeMenu === "report" ? <ReportPage data={data} /> : null}
+        {activeMenu === "settings" ? <MasterDataPage data={data} onRefresh={setData} /> : null}
         {activeMenu === "users" ? <UsersPage data={data} onRefresh={setData} /> : null}
       </section>
     </main>

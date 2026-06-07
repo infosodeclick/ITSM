@@ -6,6 +6,22 @@ import { prisma } from "@/lib/prisma";
 const activeStatuses: AssetStatus[] = [AssetStatus.ASSIGNED, AssetStatus.IN_USE, AssetStatus.TRANSFERRED];
 const damagedStatuses: AssetStatus[] = [AssetStatus.REPAIR, AssetStatus.WAITING_REPAIR, AssetStatus.REPAIRING, AssetStatus.LOST];
 const spareStatuses: AssetStatus[] = [AssetStatus.IN_STOCK, AssetStatus.READY_TO_USE, AssetStatus.SPARE, AssetStatus.RETURNED];
+const thaiStatusLabels: Record<AssetStatus, string> = {
+  IN_STOCK: "สต็อก",
+  READY_TO_USE: "พร้อมใช้",
+  ASSIGNED: "ส่งมอบแล้ว",
+  IN_USE: "ใช้งานอยู่",
+  TRANSFERRED: "โอนย้าย",
+  RETURNED: "รับคืน",
+  REPAIR: "พัง",
+  WAITING_REPAIR: "รอซ่อม",
+  REPAIRING: "กำลังซ่อม",
+  SPARE: "เครื่องสำรอง",
+  RETIRED: "เลิกใช้งาน",
+  PENDING_DISPOSAL: "รอจำหน่าย",
+  DISPOSED: "จำหน่าย",
+  LOST: "สูญหาย"
+};
 
 function toNumber(value: unknown) {
   if (value === null || value === undefined) return 0;
@@ -17,6 +33,7 @@ function purchaseYear(date: Date | null) {
 }
 
 function thaiStatus(status: AssetStatus) {
+  return thaiStatusLabels[status];
   const map: Record<AssetStatus, string> = {
     IN_STOCK: "สต็อก",
     READY_TO_USE: "พร้อมใช้",

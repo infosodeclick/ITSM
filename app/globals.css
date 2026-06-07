@@ -744,6 +744,28 @@ h1 {
   grid-template-columns: 1fr;
 }
 
+.locationGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.locationCard,
+.scanBox {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: #fbfcff;
+}
+
+.locationCard span,
+.scanBox span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .hrWorkflowPanel {
   overflow: hidden;
 }
